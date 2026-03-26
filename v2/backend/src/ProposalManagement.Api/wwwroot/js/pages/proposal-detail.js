@@ -136,13 +136,16 @@ function renderTab1(c) {
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Priority</label><div><span class="badge bg-${p.priority === 'High' ? 'danger' : p.priority === 'Low' ? 'secondary' : 'warning text-dark'}">${p.priority}</span></div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Zone</label><div>${escapeHtml(p.zoneName || '—')}</div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Prabhag</label><div>${escapeHtml(p.prabhagName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Area</label><div>${escapeHtml(p.area || '—')}</div></div>
+            ${bilingualDisplay('Area', p.area, p.area_Mr, 'col-md-4')}
             ${bilingualDisplay('Work Title', p.workTitle_En, p.workTitle_Mr)}
             ${bilingualDisplay('Work Description', p.workDescription_En, p.workDescription_Mr)}
             ${bilingualDisplay('Location Address', p.locationAddress_En, p.locationAddress_Mr)}
             ${p.requestSourceName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Request Source</label><div>${escapeHtml(p.requestSourceName)}</div></div>` : ''}
-            ${p.requestorName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Requestor</label><div>${escapeHtml(p.requestorName)}</div></div>` : ''}
-            ${p.requestorMobile ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Requestor Mobile</label><div>${escapeHtml(p.requestorMobile)}</div></div>` : ''}
+            ${p.requestorName || p.requestorName_Mr ? bilingualDisplay('Requestor Name', p.requestorName, p.requestorName_Mr, 'col-md-6') : ''}
+            ${p.requestorMobile ? `<div class="col-md-6"><label class="form-label text-muted small mb-0">Requestor Mobile</label><div>${escapeHtml(p.requestorMobile)}</div></div>` : ''}
+            ${p.requestorAddress || p.requestorAddress_Mr ? bilingualDisplay('Requestor Address', p.requestorAddress, p.requestorAddress_Mr) : ''}
+            ${p.requestorDesignation || p.requestorDesignation_Mr ? bilingualDisplay('Requestor Designation', p.requestorDesignation, p.requestorDesignation_Mr, 'col-md-6') : ''}
+            ${p.requestorOrganisation || p.requestorOrganisation_Mr ? bilingualDisplay('Requestor Organisation', p.requestorOrganisation, p.requestorOrganisation_Mr, 'col-md-6') : ''}
         </div>`;
 }
 
@@ -191,8 +194,10 @@ async function renderTab2(c, pid, canEdit) {
                 </div>
                 <div class="card-body py-3">
                     ${fv.siteConditionName ? `<div class="small mb-1">Site Condition: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
-                    ${fv.problemDescription_En ? `<div class="small mb-1">${escapeHtml(fv.problemDescription_En)}</div>` : ''}
-                    ${fv.recommendation_En ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>Rec: ${escapeHtml(fv.recommendation_En)}</div>` : ''}
+                    ${fv.problemDescription_En || fv.problemDescription_Mr ? `<div class="small mb-1"><strong>Problem:</strong> ${escapeHtml(fv.problemDescription_En || '')}${fv.problemDescription_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.problemDescription_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.measurements_En || fv.measurements_Mr ? `<div class="small mb-1"><strong>Measurements:</strong> ${escapeHtml(fv.measurements_En || '')}${fv.measurements_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.measurements_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.remark_En || fv.remark_Mr ? `<div class="small mb-1"><strong>Remark:</strong> ${escapeHtml(fv.remark_En || '')}${fv.remark_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.remark_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.recommendation_En || fv.recommendation_Mr ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>Rec: ${escapeHtml(fv.recommendation_En || '')}${fv.recommendation_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.recommendation_Mr)}</span>` : ''}</div>` : ''}
                     ${fv.gpsLatitude ? `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
                     ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>Completed: ${formatDate(fv.completedAt)}</div>` : ''}
 
@@ -391,8 +396,8 @@ async function renderTab3(c, pid, canEdit) {
             ${est.sentToName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Sent To</label><div>${escapeHtml(est.sentToName)} (${est.sentToRole})</div></div>` : ''}
             ${est.approvedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Approved By</label><div>${escapeHtml(est.approvedByName)}</div></div>` : ''}
             ${est.approvedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Approved At</label><div>${formatDate(est.approvedAt)}</div></div>` : ''}
-            ${est.approverOpinion_En ? `<div class="col-12"><label class="form-label text-muted small mb-0">Opinion</label><div>${escapeHtml(est.approverOpinion_En)}</div></div>` : ''}
-            ${est.returnQueryNote_En ? `<div class="col-12"><label class="form-label text-muted small mb-0 text-danger">Return Query</label><div class="text-danger">${escapeHtml(est.returnQueryNote_En)}</div></div>` : ''}
+            ${est.approverOpinion_En || est.approverOpinion_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0">Opinion</label><div>${escapeHtml(est.approverOpinion_En || '')}${est.approverOpinion_Mr ? `<br><span class="text-muted" lang="mr">${escapeHtml(est.approverOpinion_Mr)}</span>` : ''}</div></div>` : ''}
+            ${est.returnQueryNote_En || est.returnQueryNote_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0 text-danger">Return Query</label><div class="text-danger">${escapeHtml(est.returnQueryNote_En || '')}${est.returnQueryNote_Mr ? `<br><span lang="mr">${escapeHtml(est.returnQueryNote_Mr)}</span>` : ''}</div></div>` : ''}
         </div>
         ${canEdit && est.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-outline-primary btn-sm" id="btn-send-est"><i class="bi bi-send me-1"></i>Send for Approval</button></div>` : ''}
         ${canEdit && est.status === 'SentForApproval' ? `<div class="mt-3">
@@ -429,9 +434,12 @@ async function renderTab4(c, pid, canEdit) {
             <div class="col-md-4"><label for="tsAmt" class="form-label">TS Amount (₹)</label><input type="number" class="form-control" id="tsAmt" step="0.01"></div>
             <div class="col-md-6"><label for="tsDesc" class="form-label">Description (English)</label><textarea class="form-control" id="tsDesc" rows="3"></textarea></div>
             <div class="col-md-6"><label for="tsDescMr" class="form-label">वर्णन (मराठी)</label><textarea class="form-control" id="tsDescMr" rows="3" lang="mr"></textarea></div>
-            <div class="col-md-4"><label for="tsSanctBy" class="form-label">Sanctioned By</label><input type="text" class="form-control" id="tsSanctBy"></div>
-            <div class="col-md-4"><label for="tsSanctDept" class="form-label">Dept</label><input type="text" class="form-control" id="tsSanctDept"></div>
-            <div class="col-md-4"><label for="tsSanctDesig" class="form-label">Designation</label><input type="text" class="form-control" id="tsSanctDesig"></div>
+            <div class="col-md-6"><label for="tsSanctBy" class="form-label">Sanctioned By (EN)</label><input type="text" class="form-control" id="tsSanctBy"></div>
+            <div class="col-md-6"><label for="tsSanctByMr" class="form-label">मंजूरी देणार (मराठी)</label><input type="text" class="form-control" id="tsSanctByMr" lang="mr"></div>
+            <div class="col-md-6"><label for="tsSanctDept" class="form-label">Dept (EN)</label><input type="text" class="form-control" id="tsSanctDept"></div>
+            <div class="col-md-6"><label for="tsSanctDeptMr" class="form-label">विभाग (मराठी)</label><input type="text" class="form-control" id="tsSanctDeptMr" lang="mr"></div>
+            <div class="col-md-6"><label for="tsSanctDesig" class="form-label">Designation (EN)</label><input type="text" class="form-control" id="tsSanctDesig"></div>
+            <div class="col-md-6"><label for="tsSanctDesigMr" class="form-label">पदनाम (मराठी)</label><input type="text" class="form-control" id="tsSanctDesigMr" lang="mr"></div>
         </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>Save</button></form>`;
         document.getElementById('ts-form').addEventListener('submit', async e => {
             e.preventDefault();
@@ -442,8 +450,11 @@ async function renderTab4(c, pid, canEdit) {
                 description_En: document.getElementById('tsDesc').value || null,
                 description_Mr: document.getElementById('tsDescMr').value || null,
                 sanctionedByName: document.getElementById('tsSanctBy').value || null,
+                sanctionedByName_Mr: document.getElementById('tsSanctByMr').value || null,
                 sanctionedByDept: document.getElementById('tsSanctDept').value || null,
-                sanctionedByDesignation: document.getElementById('tsSanctDesig').value || null
+                sanctionedByDept_Mr: document.getElementById('tsSanctDeptMr').value || null,
+                sanctionedByDesignation: document.getElementById('tsSanctDesig').value || null,
+                sanctionedByDesignation_Mr: document.getElementById('tsSanctDesigMr').value || null
             };
             const r = await api.post(`/proposals/${pid}/technical-sanction`, body);
             if (r.success) { toast.success('Saved'); await renderTab4(c, pid, canEdit); } else toast.error(r.error || 'Failed');
@@ -459,10 +470,10 @@ async function renderTab4(c, pid, canEdit) {
             <div class="col-md-3"><label class="form-label text-muted small mb-0">TS Date</label><div>${formatDate(ts.tsDate)}</div></div>
             <div class="col-md-3"><label class="form-label text-muted small mb-0">TS Amount</label><div class="fw-medium">${formatCurrency(ts.tsAmount)}</div></div>
             <div class="col-md-3"><label class="form-label text-muted small mb-0">Status</label><div><span class="badge bg-${sBg}">${ts.status}</span></div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Sanctioned By</label><div>${escapeHtml(ts.sanctionedByName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Dept</label><div>${escapeHtml(ts.sanctionedByDept || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Designation</label><div>${escapeHtml(ts.sanctionedByDesignation || '—')}</div></div>
-            ${ts.description_En ? `<div class="col-12"><label class="form-label text-muted small mb-0">Description</label><div>${escapeHtml(ts.description_En)}</div></div>` : ''}
+            ${bilingualDisplay('Sanctioned By', ts.sanctionedByName, ts.sanctionedByName_Mr, 'col-md-4')}
+            ${bilingualDisplay('Dept', ts.sanctionedByDept, ts.sanctionedByDept_Mr, 'col-md-4')}
+            ${bilingualDisplay('Designation', ts.sanctionedByDesignation, ts.sanctionedByDesignation_Mr, 'col-md-4')}
+            ${ts.description_En || ts.description_Mr ? bilingualDisplay('Description', ts.description_En, ts.description_Mr) : ''}
             ${ts.preparedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Prepared By</label><div>${escapeHtml(ts.preparedByName)}</div></div>` : ''}
             ${ts.signedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Signed By</label><div>${escapeHtml(ts.signedByName)}</div></div>` : ''}
             ${ts.signedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Signed At</label><div>${formatDate(ts.signedAt)}</div></div>` : ''}
@@ -525,9 +536,9 @@ async function renderTab5(c, pid, canEdit) {
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Fund Type</label><div>${escapeHtml(pd.fundTypeName || '—')}</div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Budget Head</label><div>${escapeHtml(pd.budgetHeadName || '—')}</div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Fund Year</label><div>${escapeHtml(pd.fundApprovalYear || '—')}</div></div>
-            <div class="col-md-6"><label class="form-label text-muted small mb-0">Dept User</label><div>${escapeHtml(pd.deptUserName_En || '—')}</div></div>
-            ${pd.references_En ? `<div class="col-12"><label class="form-label text-muted small mb-0">References</label><div>${escapeHtml(pd.references_En)}</div></div>` : ''}
-            ${pd.additionalDetails_En ? `<div class="col-12"><label class="form-label text-muted small mb-0">Additional</label><div>${escapeHtml(pd.additionalDetails_En)}</div></div>` : ''}
+            ${bilingualDisplay('Dept User', pd.deptUserName_En, pd.deptUserName_Mr, 'col-md-6')}
+            ${pd.references_En || pd.references_Mr ? bilingualDisplay('References', pd.references_En, pd.references_Mr) : ''}
+            ${pd.additionalDetails_En || pd.additionalDetails_Mr ? bilingualDisplay('Additional Details', pd.additionalDetails_En, pd.additionalDetails_Mr) : ''}
         </div>`;
 }
 
@@ -593,7 +604,7 @@ async function renderTab6(c, pid, canEdit) {
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Approval Slab</label><div><span class="badge bg-info">${bd.determinedApprovalSlab || '—'}</span></div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Final Authority</label><div><span class="badge bg-dark">${bd.finalAuthorityRole || '—'}</span></div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Tender Verified</label><div>${bd.tenderVerificationDone ? '<i class="bi bi-check-circle-fill text-success"></i> Yes' : '<i class="bi bi-x-circle text-danger"></i> No'}</div></div>
-            ${bd.complianceNotes_En ? `<div class="col-12"><label class="form-label text-muted small mb-0">Compliance Notes</label><div>${escapeHtml(bd.complianceNotes_En)}</div></div>` : ''}
+            ${bd.complianceNotes_En || bd.complianceNotes_Mr ? bilingualDisplay('Compliance Notes', bd.complianceNotes_En, bd.complianceNotes_Mr) : ''}
         </div>`;
 }
 
@@ -609,11 +620,11 @@ async function renderTimeline(c, pid) {
             <div class="timeline-item action-${h.action}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div><span class="badge bg-${h.action === 'Approve' ? 'success' : h.action === 'PushBack' ? 'danger' : 'primary'} me-1">${h.action}</span>
-                        <strong>${escapeHtml(h.actorName_En || '—')}</strong> <span class="text-muted">(${h.stageRole})</span></div>
+                        <strong>${escapeHtml(h.actorName_En || '—')}</strong>${h.actorName_Mr ? ` <span class="text-muted small" lang="mr">(${escapeHtml(h.actorName_Mr)})</span>` : ''} <span class="text-muted">(${h.stageRole})</span></div>
                     <small class="text-muted">${formatDate(h.createdAt)}</small>
                 </div>
-                ${h.opinion_En ? `<div class="mt-1 small">${escapeHtml(h.opinion_En)}</div>` : ''}
-                ${h.pushBackNote_En ? `<div class="mt-1 small text-danger">${escapeHtml(h.pushBackNote_En)}</div>` : ''}
+                ${h.opinion_En || h.opinion_Mr ? `<div class="mt-1 small">${escapeHtml(h.opinion_En || '')}${h.opinion_Mr ? `<br><span class="text-muted" lang="mr">${escapeHtml(h.opinion_Mr)}</span>` : ''}</div>` : ''}
+                ${h.pushBackNote_En || h.pushBackNote_Mr ? `<div class="mt-1 small text-danger">${escapeHtml(h.pushBackNote_En || '')}${h.pushBackNote_Mr ? `<br><span lang="mr">${escapeHtml(h.pushBackNote_Mr)}</span>` : ''}</div>` : ''}
             </div>`).join('')}
         </div>`;
 }

@@ -17,8 +17,11 @@ public class TechnicalSanction : BaseEntity
 
     // Sanctioned By details
     public string? SanctionedByName { get; set; }
+    public string? SanctionedByName_Mr { get; set; }
     public string? SanctionedByDept { get; set; }
+    public string? SanctionedByDept_Mr { get; set; }
     public string? SanctionedByDesignation { get; set; }
+    public string? SanctionedByDesignation_Mr { get; set; }
 
     // Prepared by TS role
     public Guid? PreparedById { get; set; }

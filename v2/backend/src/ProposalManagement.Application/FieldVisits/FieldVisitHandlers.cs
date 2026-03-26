@@ -25,7 +25,9 @@ public record FieldVisitDto
     public decimal? GpsLatitude { get; init; }
     public decimal? GpsLongitude { get; init; }
     public string? Remark_En { get; init; }
+    public string? Remark_Mr { get; init; }
     public string? Recommendation_En { get; init; }
+    public string? Recommendation_Mr { get; init; }
     public string? UploadedPdfPath { get; init; }
     public string? SignaturePath { get; init; }
     public string Status { get; init; } = default!;
@@ -70,7 +72,9 @@ public class GetFieldVisitsHandler(IAppDbContext db, ICurrentUser user) : IReque
                 GpsLatitude = fv.GpsLatitude,
                 GpsLongitude = fv.GpsLongitude,
                 Remark_En = fv.Remark_En,
+                Remark_Mr = fv.Remark_Mr,
                 Recommendation_En = fv.Recommendation_En,
+                Recommendation_Mr = fv.Recommendation_Mr,
                 UploadedPdfPath = fv.UploadedPdfPath,
                 SignaturePath = fv.SignaturePath,
                 Status = fv.Status,

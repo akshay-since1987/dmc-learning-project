@@ -24,8 +24,10 @@ public record EstimateDto
     public string? ApproverSignaturePath { get; init; }
     public bool ApproverDisclaimerAccepted { get; init; }
     public string? ApproverOpinion_En { get; init; }
+    public string? ApproverOpinion_Mr { get; init; }
     public string Status { get; init; } = default!;
     public string? ReturnQueryNote_En { get; init; }
+    public string? ReturnQueryNote_Mr { get; init; }
     public DateTime? ApprovedAt { get; init; }
     public DateTime CreatedAt { get; init; }
 }
@@ -51,8 +53,9 @@ public class GetEstimateHandler(IAppDbContext db) : IRequestHandler<GetEstimateQ
             SentToRole = est.SentToRole, SentToName = est.SentTo?.FullName_En,
             ApprovedByName = est.ApprovedBy?.FullName_En, ApproverSignaturePath = est.ApproverSignaturePath,
             ApproverDisclaimerAccepted = est.ApproverDisclaimerAccepted,
-            ApproverOpinion_En = est.ApproverOpinion_En, Status = est.Status,
-            ReturnQueryNote_En = est.ReturnQueryNote_En, ApprovedAt = est.ApprovedAt, CreatedAt = est.CreatedAt,
+            ApproverOpinion_En = est.ApproverOpinion_En, ApproverOpinion_Mr = est.ApproverOpinion_Mr,
+            Status = est.Status,
+            ReturnQueryNote_En = est.ReturnQueryNote_En, ReturnQueryNote_Mr = est.ReturnQueryNote_Mr, ApprovedAt = est.ApprovedAt, CreatedAt = est.CreatedAt,
         });
     }
 }
@@ -120,6 +123,7 @@ public record ApproveEstimateCommand : IRequest<Result>
     public Guid EstimateId { get; init; }
     public bool DisclaimerAccepted { get; init; }
     public string? Opinion_En { get; init; }
+    public string? Opinion_Mr { get; init; }
 }
 
 public class ApproveEstimateHandler(IAppDbContext db, ICurrentUser user) : IRequestHandler<ApproveEstimateCommand, Result>
@@ -133,6 +137,7 @@ public class ApproveEstimateHandler(IAppDbContext db, ICurrentUser user) : IRequ
         est.ApprovedById = user.UserId;
         est.ApproverDisclaimerAccepted = request.DisclaimerAccepted;
         est.ApproverOpinion_En = request.Opinion_En;
+        est.ApproverOpinion_Mr = request.Opinion_Mr;
         est.Status = nameof(EstimateStatus.Approved);
         est.ApprovedAt = DateTime.UtcNow;
         est.Proposal.CurrentStage = nameof(ProposalStage.EstimateApproved);
@@ -142,7 +147,7 @@ public class ApproveEstimateHandler(IAppDbContext db, ICurrentUser user) : IRequ
     }
 }
 
-public record ReturnEstimateCommand(Guid EstimateId, string QueryNote_En) : IRequest<Result>;
+public record ReturnEstimateCommand(Guid EstimateId, string QueryNote_En, string? QueryNote_Mr = null) : IRequest<Result>;
 
 public class ReturnEstimateHandler(IAppDbContext db, ICurrentUser user) : IRequestHandler<ReturnEstimateCommand, Result>
 {
@@ -153,6 +158,7 @@ public class ReturnEstimateHandler(IAppDbContext db, ICurrentUser user) : IReque
 
         est.Status = nameof(EstimateStatus.ReturnedWithQuery);
         est.ReturnQueryNote_En = request.QueryNote_En;
+        est.ReturnQueryNote_Mr = request.QueryNote_Mr;
         await db.SaveChangesAsync(ct);
         return Result.Success();
     }

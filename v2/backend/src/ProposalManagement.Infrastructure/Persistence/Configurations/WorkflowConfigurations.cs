@@ -89,8 +89,11 @@ public class TechnicalSanctionConfiguration : IEntityTypeConfiguration<Technical
         builder.Property(e => e.TsPdfPath).HasMaxLength(500);
         builder.Property(e => e.OutsideApprovalLetterPath).HasMaxLength(500);
         builder.Property(e => e.SanctionedByName).HasMaxLength(200);
+        builder.Property(e => e.SanctionedByName_Mr).HasMaxLength(200);
         builder.Property(e => e.SanctionedByDept).HasMaxLength(200);
+        builder.Property(e => e.SanctionedByDept_Mr).HasMaxLength(200);
         builder.Property(e => e.SanctionedByDesignation).HasMaxLength(200);
+        builder.Property(e => e.SanctionedByDesignation_Mr).HasMaxLength(200);
         builder.Property(e => e.SignerSignaturePath).HasMaxLength(500);
         builder.Property(e => e.Status).HasMaxLength(30).IsRequired();
         builder.HasIndex(e => e.ProposalId).IsUnique();

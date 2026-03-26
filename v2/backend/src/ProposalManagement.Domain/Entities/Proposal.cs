@@ -15,6 +15,7 @@ public class Proposal : BaseEntity
     public Guid ZoneId { get; set; }
     public Guid PrabhagId { get; set; }
     public string? Area { get; set; }
+    public string? Area_Mr { get; set; }
     public string? LocationAddress_En { get; set; }
     public string? LocationAddress_Mr { get; set; }
     public string? LocationMapPath { get; set; }
@@ -28,10 +29,14 @@ public class Proposal : BaseEntity
     // Request Source
     public Guid? RequestSourceId { get; set; }
     public string? RequestorName { get; set; }
+    public string? RequestorName_Mr { get; set; }
     public string? RequestorMobile { get; set; }
     public string? RequestorAddress { get; set; }
+    public string? RequestorAddress_Mr { get; set; }
     public string? RequestorDesignation { get; set; }
+    public string? RequestorDesignation_Mr { get; set; }
     public string? RequestorOrganisation { get; set; }
+    public string? RequestorOrganisation_Mr { get; set; }
 
     public string Priority { get; set; } = Enums.Priority.Medium.ToString();
 

@@ -81,10 +81,7 @@ export async function renderProposalFormPage(params = {}) {
                                 <option value="">Select Prabhag</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label for="area" class="form-label">Area</label>
-                            <input type="text" class="form-control" id="area" value="${escapeHtml(existing?.area || '')}" placeholder="Area/locality name">
-                        </div>
+                        <div class="col-md-4" id="dual-area-container"></div>
                         <div class="col-12" id="dual-locationAddress-container"></div>
                     </div>
                 </div>
@@ -111,26 +108,14 @@ export async function renderProposalFormPage(params = {}) {
                                 ${requestSources.map(s => `<option value="${s.id}" ${existing?.requestSourceId === s.id ? 'selected' : ''}>${escapeHtml(s.name_En)}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label for="requestorName" class="form-label">Requestor Name</label>
-                            <input type="text" class="form-control" id="requestorName" value="${escapeHtml(existing?.requestorName || '')}">
-                        </div>
+                        <div class="col-md-8" id="dual-requestorName-container"></div>
                         <div class="col-md-4">
                             <label for="requestorMobile" class="form-label">Requestor Mobile</label>
                             <input type="tel" class="form-control" id="requestorMobile" maxlength="10" value="${escapeHtml(existing?.requestorMobile || '')}">
                         </div>
-                        <div class="col-md-4">
-                            <label for="requestorAddress" class="form-label">Address</label>
-                            <input type="text" class="form-control" id="requestorAddress" value="${escapeHtml(existing?.requestorAddress || '')}">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="requestorDesignation" class="form-label">Designation</label>
-                            <input type="text" class="form-control" id="requestorDesignation" value="${escapeHtml(existing?.requestorDesignation || '')}">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="requestorOrganisation" class="form-label">Organisation</label>
-                            <input type="text" class="form-control" id="requestorOrganisation" value="${escapeHtml(existing?.requestorOrganisation || '')}">
-                        </div>
+                        <div class="col-md-8" id="dual-requestorAddress-container"></div>
+                        <div class="col-md-6" id="dual-requestorDesignation-container"></div>
+                        <div class="col-md-6" id="dual-requestorOrganisation-container"></div>
                     </div>
                 </div>
             </div>
@@ -159,6 +144,14 @@ export async function renderProposalFormPage(params = {}) {
         </form>`;
 
     // ── Dual-language input components ──
+    const dualArea = createDualLangInput({
+        name: 'area', label: 'Area', type: 'text',
+        required: false, maxLength: 200,
+        valueEn: existing?.area || '', valueMr: existing?.area_Mr || '',
+        placeholderEn: 'Area/locality name', placeholderMr: 'भाग/परिसराचे नाव'
+    });
+    document.getElementById('dual-area-container').appendChild(dualArea);
+
     const dualLocationAddress = createDualLangInput({
         name: 'locationAddress', label: 'Location Address', type: 'textarea',
         required: false, rows: 2, maxLength: 500,
@@ -182,6 +175,38 @@ export async function renderProposalFormPage(params = {}) {
         placeholderEn: 'Detailed description of the proposed work...', placeholderMr: 'प्रस्तावित कामाचे सविस्तर वर्णन...'
     });
     document.getElementById('dual-workDescription-container').appendChild(dualWorkDescription);
+
+    const dualRequestorName = createDualLangInput({
+        name: 'requestorName', label: 'Requestor Name', type: 'text',
+        required: false, maxLength: 200,
+        valueEn: existing?.requestorName || '', valueMr: existing?.requestorName_Mr || '',
+        placeholderEn: 'Requestor name', placeholderMr: 'अर्जदाराचे नाव'
+    });
+    document.getElementById('dual-requestorName-container').appendChild(dualRequestorName);
+
+    const dualRequestorAddress = createDualLangInput({
+        name: 'requestorAddress', label: 'Requestor Address', type: 'text',
+        required: false, maxLength: 500,
+        valueEn: existing?.requestorAddress || '', valueMr: existing?.requestorAddress_Mr || '',
+        placeholderEn: 'Requestor address', placeholderMr: 'अर्जदाराचा पत्ता'
+    });
+    document.getElementById('dual-requestorAddress-container').appendChild(dualRequestorAddress);
+
+    const dualRequestorDesignation = createDualLangInput({
+        name: 'requestorDesignation', label: 'Requestor Designation', type: 'text',
+        required: false, maxLength: 200,
+        valueEn: existing?.requestorDesignation || '', valueMr: existing?.requestorDesignation_Mr || '',
+        placeholderEn: 'Designation', placeholderMr: 'पदनाम'
+    });
+    document.getElementById('dual-requestorDesignation-container').appendChild(dualRequestorDesignation);
+
+    const dualRequestorOrganisation = createDualLangInput({
+        name: 'requestorOrganisation', label: 'Requestor Organisation', type: 'text',
+        required: false, maxLength: 300,
+        valueEn: existing?.requestorOrganisation || '', valueMr: existing?.requestorOrganisation_Mr || '',
+        placeholderEn: 'Organisation', placeholderMr: 'संस्था'
+    });
+    document.getElementById('dual-requestorOrganisation-container').appendChild(dualRequestorOrganisation);
 
     // ── Cascading dropdowns ──
 
@@ -243,7 +268,8 @@ export async function renderProposalFormPage(params = {}) {
             deptWorkCategoryId: catSelect.value,
             zoneId: zoneSelect.value,
             prabhagId: prabhagSelect.value,
-            area: document.getElementById('area').value.trim() || null,
+            area: dualArea.getValues().en || null,
+            area_Mr: dualArea.getValues().mr || null,
             locationAddress_En: dualLocationAddress.getValues().en || null,
             locationAddress_Mr: dualLocationAddress.getValues().mr || null,
             workTitle_En: dualWorkTitle.getValues().en,
@@ -251,11 +277,15 @@ export async function renderProposalFormPage(params = {}) {
             workDescription_En: dualWorkDescription.getValues().en,
             workDescription_Mr: dualWorkDescription.getValues().mr || null,
             requestSourceId: document.getElementById('requestSourceId').value || null,
-            requestorName: document.getElementById('requestorName').value.trim() || null,
+            requestorName: dualRequestorName.getValues().en || null,
+            requestorName_Mr: dualRequestorName.getValues().mr || null,
             requestorMobile: document.getElementById('requestorMobile').value.trim() || null,
-            requestorAddress: document.getElementById('requestorAddress').value.trim() || null,
-            requestorDesignation: document.getElementById('requestorDesignation').value.trim() || null,
-            requestorOrganisation: document.getElementById('requestorOrganisation').value.trim() || null,
+            requestorAddress: dualRequestorAddress.getValues().en || null,
+            requestorAddress_Mr: dualRequestorAddress.getValues().mr || null,
+            requestorDesignation: dualRequestorDesignation.getValues().en || null,
+            requestorDesignation_Mr: dualRequestorDesignation.getValues().mr || null,
+            requestorOrganisation: dualRequestorOrganisation.getValues().en || null,
+            requestorOrganisation_Mr: dualRequestorOrganisation.getValues().mr || null,
             priority: document.getElementById('priority').value
         };
 

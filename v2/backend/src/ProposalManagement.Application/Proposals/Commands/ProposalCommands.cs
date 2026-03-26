@@ -16,6 +16,7 @@ public record CreateProposalCommand : IRequest<Result<CreateProposalResponse>>
     public Guid ZoneId { get; init; }
     public Guid PrabhagId { get; init; }
     public string? Area { get; init; }
+    public string? Area_Mr { get; init; }
     public string? LocationAddress_En { get; init; }
     public string? LocationAddress_Mr { get; init; }
     public string WorkTitle_En { get; init; } = default!;
@@ -24,10 +25,14 @@ public record CreateProposalCommand : IRequest<Result<CreateProposalResponse>>
     public string? WorkDescription_Mr { get; init; }
     public Guid? RequestSourceId { get; init; }
     public string? RequestorName { get; init; }
+    public string? RequestorName_Mr { get; init; }
     public string? RequestorMobile { get; init; }
     public string? RequestorAddress { get; init; }
+    public string? RequestorAddress_Mr { get; init; }
     public string? RequestorDesignation { get; init; }
+    public string? RequestorDesignation_Mr { get; init; }
     public string? RequestorOrganisation { get; init; }
+    public string? RequestorOrganisation_Mr { get; init; }
     public string Priority { get; init; } = nameof(Domain.Enums.Priority.Medium);
 }
 
@@ -72,6 +77,7 @@ public class CreateProposalHandler : IRequestHandler<CreateProposalCommand, Resu
             ZoneId = request.ZoneId,
             PrabhagId = request.PrabhagId,
             Area = request.Area,
+            Area_Mr = request.Area_Mr,
             LocationAddress_En = request.LocationAddress_En,
             LocationAddress_Mr = request.LocationAddress_Mr,
             WorkTitle_En = request.WorkTitle_En,
@@ -80,10 +86,14 @@ public class CreateProposalHandler : IRequestHandler<CreateProposalCommand, Resu
             WorkDescription_Mr = request.WorkDescription_Mr,
             RequestSourceId = request.RequestSourceId,
             RequestorName = request.RequestorName,
+            RequestorName_Mr = request.RequestorName_Mr,
             RequestorMobile = request.RequestorMobile,
             RequestorAddress = request.RequestorAddress,
+            RequestorAddress_Mr = request.RequestorAddress_Mr,
             RequestorDesignation = request.RequestorDesignation,
+            RequestorDesignation_Mr = request.RequestorDesignation_Mr,
             RequestorOrganisation = request.RequestorOrganisation,
+            RequestorOrganisation_Mr = request.RequestorOrganisation_Mr,
             Priority = request.Priority,
             CreatedById = _user.UserId!.Value,
             CurrentOwnerId = _user.UserId!.Value,
@@ -109,6 +119,7 @@ public record UpdateProposalCommand : IRequest<Result>
     public Guid ZoneId { get; init; }
     public Guid PrabhagId { get; init; }
     public string? Area { get; init; }
+    public string? Area_Mr { get; init; }
     public string? LocationAddress_En { get; init; }
     public string? LocationAddress_Mr { get; init; }
     public string WorkTitle_En { get; init; } = default!;
@@ -117,10 +128,14 @@ public record UpdateProposalCommand : IRequest<Result>
     public string? WorkDescription_Mr { get; init; }
     public Guid? RequestSourceId { get; init; }
     public string? RequestorName { get; init; }
+    public string? RequestorName_Mr { get; init; }
     public string? RequestorMobile { get; init; }
     public string? RequestorAddress { get; init; }
+    public string? RequestorAddress_Mr { get; init; }
     public string? RequestorDesignation { get; init; }
+    public string? RequestorDesignation_Mr { get; init; }
     public string? RequestorOrganisation { get; init; }
+    public string? RequestorOrganisation_Mr { get; init; }
     public string Priority { get; init; } = nameof(Domain.Enums.Priority.Medium);
 }
 
@@ -152,6 +167,7 @@ public class UpdateProposalHandler : IRequestHandler<UpdateProposalCommand, Resu
         proposal.ZoneId = request.ZoneId;
         proposal.PrabhagId = request.PrabhagId;
         proposal.Area = request.Area;
+        proposal.Area_Mr = request.Area_Mr;
         proposal.LocationAddress_En = request.LocationAddress_En;
         proposal.LocationAddress_Mr = request.LocationAddress_Mr;
         proposal.WorkTitle_En = request.WorkTitle_En;
@@ -160,10 +176,14 @@ public class UpdateProposalHandler : IRequestHandler<UpdateProposalCommand, Resu
         proposal.WorkDescription_Mr = request.WorkDescription_Mr;
         proposal.RequestSourceId = request.RequestSourceId;
         proposal.RequestorName = request.RequestorName;
+        proposal.RequestorName_Mr = request.RequestorName_Mr;
         proposal.RequestorMobile = request.RequestorMobile;
         proposal.RequestorAddress = request.RequestorAddress;
+        proposal.RequestorAddress_Mr = request.RequestorAddress_Mr;
         proposal.RequestorDesignation = request.RequestorDesignation;
+        proposal.RequestorDesignation_Mr = request.RequestorDesignation_Mr;
         proposal.RequestorOrganisation = request.RequestorOrganisation;
+        proposal.RequestorOrganisation_Mr = request.RequestorOrganisation_Mr;
         proposal.Priority = request.Priority;
 
         await _db.SaveChangesAsync(ct);

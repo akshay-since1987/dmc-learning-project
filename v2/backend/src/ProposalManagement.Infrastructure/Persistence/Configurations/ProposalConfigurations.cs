@@ -22,12 +22,17 @@ public class ProposalConfiguration : IEntityTypeConfiguration<Proposal>
         builder.Property(e => e.LocationAddress_Mr).HasMaxLength(500);
         builder.Property(e => e.LocationMapPath).HasMaxLength(500);
         builder.Property(e => e.Area).HasMaxLength(200);
+        builder.Property(e => e.Area_Mr).HasMaxLength(200);
 
         builder.Property(e => e.RequestorName).HasMaxLength(200);
+        builder.Property(e => e.RequestorName_Mr).HasMaxLength(200);
         builder.Property(e => e.RequestorMobile).HasMaxLength(15);
         builder.Property(e => e.RequestorAddress).HasMaxLength(500);
+        builder.Property(e => e.RequestorAddress_Mr).HasMaxLength(500);
         builder.Property(e => e.RequestorDesignation).HasMaxLength(200);
+        builder.Property(e => e.RequestorDesignation_Mr).HasMaxLength(200);
         builder.Property(e => e.RequestorOrganisation).HasMaxLength(300);
+        builder.Property(e => e.RequestorOrganisation_Mr).HasMaxLength(300);
         builder.Property(e => e.Priority).HasMaxLength(20);
 
         builder.Property(e => e.CurrentStage).HasMaxLength(50).IsRequired();

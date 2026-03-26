@@ -30,6 +30,7 @@ public record ProposalDetailDto
     public Guid PrabhagId { get; init; }
     public string? PrabhagName { get; init; }
     public string? Area { get; init; }
+    public string? Area_Mr { get; init; }
     public string? LocationAddress_En { get; init; }
     public string? LocationAddress_Mr { get; init; }
     public string? LocationMapPath { get; init; }
@@ -42,10 +43,14 @@ public record ProposalDetailDto
     public Guid? RequestSourceId { get; init; }
     public string? RequestSourceName { get; init; }
     public string? RequestorName { get; init; }
+    public string? RequestorName_Mr { get; init; }
     public string? RequestorMobile { get; init; }
     public string? RequestorAddress { get; init; }
+    public string? RequestorAddress_Mr { get; init; }
     public string? RequestorDesignation { get; init; }
+    public string? RequestorDesignation_Mr { get; init; }
     public string? RequestorOrganisation { get; init; }
+    public string? RequestorOrganisation_Mr { get; init; }
 
     public string Priority { get; init; } = default!;
     public string CurrentStage { get; init; } = default!;

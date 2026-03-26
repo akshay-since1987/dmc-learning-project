@@ -20,8 +20,11 @@ public record TechnicalSanctionDto
     public string? TsPdfPath { get; init; }
     public string? OutsideApprovalLetterPath { get; init; }
     public string? SanctionedByName { get; init; }
+    public string? SanctionedByName_Mr { get; init; }
     public string? SanctionedByDept { get; init; }
+    public string? SanctionedByDept_Mr { get; init; }
     public string? SanctionedByDesignation { get; init; }
+    public string? SanctionedByDesignation_Mr { get; init; }
     public string? PreparedByName { get; init; }
     public string? SignedByName { get; init; }
     public string? SignerSignaturePath { get; init; }
@@ -48,8 +51,9 @@ public class GetTechnicalSanctionHandler(IAppDbContext db) : IRequestHandler<Get
             Id = ts.Id, TsNumber = ts.TsNumber, TsDate = ts.TsDate, TsAmount = ts.TsAmount,
             Description_En = ts.Description_En, Description_Mr = ts.Description_Mr,
             TsPdfPath = ts.TsPdfPath, OutsideApprovalLetterPath = ts.OutsideApprovalLetterPath,
-            SanctionedByName = ts.SanctionedByName, SanctionedByDept = ts.SanctionedByDept,
-            SanctionedByDesignation = ts.SanctionedByDesignation,
+            SanctionedByName = ts.SanctionedByName, SanctionedByName_Mr = ts.SanctionedByName_Mr,
+            SanctionedByDept = ts.SanctionedByDept, SanctionedByDept_Mr = ts.SanctionedByDept_Mr,
+            SanctionedByDesignation = ts.SanctionedByDesignation, SanctionedByDesignation_Mr = ts.SanctionedByDesignation_Mr,
             PreparedByName = ts.PreparedBy?.FullName_En, SignedByName = ts.SignedBy?.FullName_En,
             SignerSignaturePath = ts.SignerSignaturePath, SignedAt = ts.SignedAt,
             Status = ts.Status, CreatedAt = ts.CreatedAt
@@ -67,8 +71,11 @@ public record SaveTechnicalSanctionCommand : IRequest<Result<Guid>>
     public string? Description_En { get; init; }
     public string? Description_Mr { get; init; }
     public string? SanctionedByName { get; init; }
+    public string? SanctionedByName_Mr { get; init; }
     public string? SanctionedByDept { get; init; }
+    public string? SanctionedByDept_Mr { get; init; }
     public string? SanctionedByDesignation { get; init; }
+    public string? SanctionedByDesignation_Mr { get; init; }
 }
 
 public class SaveTechnicalSanctionHandler(IAppDbContext db, ICurrentUser user, ILogger<SaveTechnicalSanctionHandler> logger) 
@@ -86,8 +93,11 @@ public class SaveTechnicalSanctionHandler(IAppDbContext db, ICurrentUser user, I
             existing.Description_En = request.Description_En;
             existing.Description_Mr = request.Description_Mr;
             existing.SanctionedByName = request.SanctionedByName;
+            existing.SanctionedByName_Mr = request.SanctionedByName_Mr;
             existing.SanctionedByDept = request.SanctionedByDept;
+            existing.SanctionedByDept_Mr = request.SanctionedByDept_Mr;
             existing.SanctionedByDesignation = request.SanctionedByDesignation;
+            existing.SanctionedByDesignation_Mr = request.SanctionedByDesignation_Mr;
             await db.SaveChangesAsync(ct);
             return Result<Guid>.Success(existing.Id);
         }
@@ -97,8 +107,9 @@ public class SaveTechnicalSanctionHandler(IAppDbContext db, ICurrentUser user, I
             Id = Guid.NewGuid(), ProposalId = request.ProposalId,
             TsNumber = request.TsNumber, TsDate = request.TsDate, TsAmount = request.TsAmount,
             Description_En = request.Description_En, Description_Mr = request.Description_Mr,
-            SanctionedByName = request.SanctionedByName, SanctionedByDept = request.SanctionedByDept,
-            SanctionedByDesignation = request.SanctionedByDesignation,
+            SanctionedByName = request.SanctionedByName, SanctionedByName_Mr = request.SanctionedByName_Mr,
+            SanctionedByDept = request.SanctionedByDept, SanctionedByDept_Mr = request.SanctionedByDept_Mr,
+            SanctionedByDesignation = request.SanctionedByDesignation, SanctionedByDesignation_Mr = request.SanctionedByDesignation_Mr,
             PreparedById = user.UserId, Status = nameof(TechnicalSanctionStatus.Draft),
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         };
