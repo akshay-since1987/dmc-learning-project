@@ -69,10 +69,6 @@ appsettings.Staging.json
 uploads/
 wwwroot/images/signatures/
 
-# ── Temp files from dev/testing ──
-temp.json
-temp_otp.json
-
 # ── Docker (keep compose/Dockerfile, ignore runtime) ──
 docker-data/
 
