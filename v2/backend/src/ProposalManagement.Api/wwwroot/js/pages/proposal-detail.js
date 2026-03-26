@@ -175,7 +175,8 @@ async function renderTab2(c, pid, canEdit) {
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
-            const isAssignee = canEdit && fv.status !== 'Completed';
+            const canUpload = canEdit;  // any user with tab-edit access can upload photos
+            const canModifyVisit = canEdit && fv.status !== 'Completed';
             const photoCount = fv.photos?.length || 0;
 
             html += `<div class="card mb-3 ${fv.status === 'Completed' ? 'border-success' : ''}">
@@ -194,39 +195,42 @@ async function renderTab2(c, pid, canEdit) {
                     ${fv.gpsLatitude ? `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
                     ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>Completed: ${formatDate(fv.completedAt)}</div>` : ''}
 
-                    <!-- ── Site Photos Section ── -->
-                    <div class="border rounded p-3 bg-light mt-2">
+                    <!-- ── Site Photos Section (always visible per visit) ── -->
+                    <div class="border rounded p-3 mt-2" style="background:#f8f9fa;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0 small fw-bold"><i class="bi bi-images me-1"></i>Site Photos (${photoCount})</h6>
-                            ${isAssignee ? `<label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>Site Photos
+                                <span class="badge ${photoCount > 0 ? 'bg-primary' : 'bg-danger'} ms-1">${photoCount}</span>
+                            </h6>
+                            ${canUpload ? `<label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
                                 <i class="bi bi-camera-fill me-1"></i>Upload Photos
                                 <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
                             </label>` : ''}
                         </div>
 
-                        ${photoCount === 0 && isAssignee ? `
-                            <div class="text-center py-4 border border-2 border-dashed rounded bg-white fv-drop-zone" data-id="${fv.id}">
+                        ${photoCount === 0 && canUpload ? `
+                            <div class="text-center py-4 border border-2 border-dashed rounded bg-white fv-drop-zone" data-id="${fv.id}" style="cursor:pointer;">
                                 <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
-                                <p class="text-muted mb-1">Drag & drop site photos here</p>
-                                <p class="text-muted small mb-0">or click "Upload Photos" above (JPEG, PNG, WebP — max 5 MB each)</p>
+                                <p class="text-muted mb-1 fw-medium">Drag & drop site photos here</p>
+                                <p class="text-muted small mb-0">or click "Upload Photos" above · JPEG, PNG, WebP · max 5 MB each</p>
+                                ${fv.status !== 'Completed' ? '<p class="text-danger small mt-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>Photos are mandatory for this visit</p>' : ''}
                             </div>` : ''}
 
-                        ${photoCount === 0 && !isAssignee ? `<p class="text-muted small mb-0">No photos uploaded yet.</p>` : ''}
+                        ${photoCount === 0 && !canUpload ? `<p class="text-muted small mb-0">No photos uploaded yet.</p>` : ''}
 
                         ${photoCount > 0 ? `
                             <div class="d-flex flex-wrap gap-2">
                                 ${fv.photos.map(p => `
-                                    <div class="position-relative border rounded overflow-hidden" style="width:110px;height:110px;">
+                                    <div class="position-relative border rounded overflow-hidden shadow-sm" style="width:110px;height:110px;">
                                         <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}"
                                             class="w-100 h-100" style="object-fit:cover;cursor:pointer;"
                                             onclick="window.open(this.src,'_blank')" title="Click to view full size">
-                                        ${isAssignee ? `<button class="btn btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo rounded-0"
+                                        ${canUpload ? `<button class="btn btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo rounded-0"
                                             data-fv-id="${fv.id}" data-photo-id="${p.id}" style="width:22px;height:22px;font-size:11px;opacity:0.85;" title="Delete photo">
                                             <i class="bi bi-x-lg"></i></button>` : ''}
                                     </div>`).join('')}
-                                ${isAssignee ? `
-                                    <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white" 
-                                        style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
+                                ${canUpload ? `
+                                    <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white shadow-sm fv-drop-zone"  
+                                        data-id="${fv.id}" style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
                                         <div class="text-center text-muted">
                                             <i class="bi bi-plus-lg fs-4"></i><br><small>Add more</small>
                                         </div>
@@ -235,7 +239,7 @@ async function renderTab2(c, pid, canEdit) {
                             </div>` : ''}
                     </div>
 
-                    ${isAssignee && !fv.completedAt ? `
+                    ${canModifyVisit && !fv.completedAt ? `
                         <div class="mt-3">
                             <button class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Mark as Complete</button>
                         </div>` : ''}
