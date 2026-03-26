@@ -34,10 +34,14 @@ public record FieldVisitDto
     public List<FieldVisitPhotoDto> Photos { get; init; } = [];
 }
 
-public record FieldVisitPhotoDto(Guid Id, string FileName, long FileSize, string? Caption, DateTime CreatedAt);
+public record FieldVisitPhotoDto(Guid Id, string FileName, long FileSize, string StoragePath, string? Caption, DateTime CreatedAt);
 
 // ── Queries ──
 public record GetFieldVisitsQuery(Guid ProposalId) : IRequest<Result<List<FieldVisitDto>>>;
+
+public record GetAssignableEngineersQuery(Guid ProposalId) : IRequest<Result<List<AssignableEngineerDto>>>;
+
+public record AssignableEngineerDto(Guid Id, string FullName_En, string? FullName_Mr, string Role, string? DepartmentName);
 
 public class GetFieldVisitsHandler(IAppDbContext db, ICurrentUser user) : IRequestHandler<GetFieldVisitsQuery, Result<List<FieldVisitDto>>>
 {
@@ -72,11 +76,35 @@ public class GetFieldVisitsHandler(IAppDbContext db, ICurrentUser user) : IReque
                 Status = fv.Status,
                 CompletedAt = fv.CompletedAt,
                 CreatedAt = fv.CreatedAt,
-                Photos = fv.Photos.Select(p => new FieldVisitPhotoDto(p.Id, p.FileName, p.FileSize, p.Caption, p.CreatedAt)).ToList()
+                Photos = fv.Photos.Select(p => new FieldVisitPhotoDto(p.Id, p.FileName, p.FileSize, p.StoragePath, p.Caption, p.CreatedAt)).ToList()
             })
             .ToListAsync(ct);
 
         return Result<List<FieldVisitDto>>.Success(items);
+    }
+}
+
+// ── Get assignable engineers (JE, TS from same palika) ──
+public class GetAssignableEngineersHandler(IAppDbContext db, ICurrentUser user) 
+    : IRequestHandler<GetAssignableEngineersQuery, Result<List<AssignableEngineerDto>>>
+{
+    private static readonly HashSet<string> AssignableRoles = new() { "JE", "TS" };
+
+    public async Task<Result<List<AssignableEngineerDto>>> Handle(GetAssignableEngineersQuery request, CancellationToken ct)
+    {
+        var palikaId = user.PalikaId!.Value;
+        
+        var engineers = await db.Users
+            .Where(u => u.PalikaId == palikaId && !u.IsDeleted && u.IsActive)
+            .Where(u => AssignableRoles.Contains(u.Role))
+            .Include(u => u.Department)
+            .OrderBy(u => u.Role).ThenBy(u => u.FullName_En)
+            .Select(u => new AssignableEngineerDto(
+                u.Id, u.FullName_En, u.FullName_Mr, u.Role,
+                u.Department != null ? u.Department.Name_En : null))
+            .ToListAsync(ct);
+        
+        return Result<List<AssignableEngineerDto>>.Success(engineers);
     }
 }
 
@@ -187,6 +215,87 @@ public class CompleteFieldVisitHandler(IAppDbContext db, ICurrentUser user, ILog
 
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Field visit {Id} completed for Proposal {ProposalId}", request.Id, fv.ProposalId);
+        return Result.Success();
+    }
+}
+
+// ── Photo Upload ──
+public record UploadFieldVisitPhotoCommand : IRequest<Result<Guid>>
+{
+    public Guid FieldVisitId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+    public string? Caption { get; init; }
+}
+
+public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitPhotoHandler> logger) 
+    : IRequestHandler<UploadFieldVisitPhotoCommand, Result<Guid>>
+{
+    private static readonly HashSet<string> AllowedImageTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/gif", "image/webp"
+    };
+    private const long MaxPhotoSize = 5 * 1024 * 1024; // 5 MB
+
+    public async Task<Result<Guid>> Handle(UploadFieldVisitPhotoCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxPhotoSize) return Result<Guid>.Failure("Photo size exceeds 5 MB limit");
+        if (!AllowedImageTypes.Contains(request.ContentType)) return Result<Guid>.Failure($"File type '{request.ContentType}' not allowed. Use JPEG, PNG, GIF or WebP.");
+
+        var fv = await db.FieldVisits.FindAsync(new object[] { request.FieldVisitId }, ct);
+        if (fv is null) return Result<Guid>.NotFound("Field visit not found");
+        if (fv.AssignedToId != user.UserId) return Result<Guid>.Forbidden("Only assigned engineer can upload photos");
+
+        var safeFileName = Path.GetFileName(request.FileName);
+        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        var photo = new FieldVisitPhoto
+        {
+            Id = Guid.NewGuid(),
+            FieldVisitId = request.FieldVisitId,
+            FileName = safeFileName,
+            FileSize = request.FileSize,
+            ContentType = request.ContentType,
+            StoragePath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}",
+            Caption = request.Caption,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.FieldVisitPhotos.Add(photo);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Photo {FileName} uploaded for FieldVisit {FieldVisitId}", safeFileName, request.FieldVisitId);
+        return Result<Guid>.Success(photo.Id);
+    }
+}
+
+// ── Delete Photo ──
+public record DeleteFieldVisitPhotoCommand(Guid PhotoId) : IRequest<Result>;
+
+public class DeleteFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user)
+    : IRequestHandler<DeleteFieldVisitPhotoCommand, Result>
+{
+    public async Task<Result> Handle(DeleteFieldVisitPhotoCommand request, CancellationToken ct)
+    {
+        var photo = await db.FieldVisitPhotos
+            .Include(p => p.FieldVisit)
+            .FirstOrDefaultAsync(p => p.Id == request.PhotoId, ct);
+        if (photo is null) return Result.NotFound();
+        if (photo.FieldVisit.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can delete photos");
+
+        // Delete physical file
+        var filePath = Path.Combine("wwwroot", photo.StoragePath.TrimStart('/'));
+        if (File.Exists(filePath)) File.Delete(filePath);
+
+        db.FieldVisitPhotos.Remove(photo);
+        await db.SaveChangesAsync(ct);
         return Result.Success();
     }
 }

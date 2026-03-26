@@ -160,6 +160,7 @@ async function renderTab2(c, pid, canEdit) {
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
+            const isAssignee = canEdit && fv.status !== 'Completed';
             html += `<div class="card mb-2"><div class="card-body py-2 px-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <div><strong>Visit #${fv.visitNumber}</strong><span class="badge bg-${sBg} ms-2">${fv.status}</span>
@@ -170,25 +171,118 @@ async function renderTab2(c, pid, canEdit) {
                 ${fv.problemDescription_En ? `<div class="small mt-1">${escapeHtml(fv.problemDescription_En)}</div>` : ''}
                 ${fv.recommendation_En ? `<div class="small mt-1 text-success">Rec: ${escapeHtml(fv.recommendation_En)}</div>` : ''}
                 ${fv.gpsLatitude ? `<div class="small mt-1 text-muted"><i class="bi bi-geo-alt"></i> ${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
-                ${fv.photos && fv.photos.length > 0 ? `<div class="small mt-1"><i class="bi bi-camera me-1"></i>${fv.photos.length} photo(s)</div>` : ''}
+                ${fv.photos && fv.photos.length > 0 ? `
+                    <div class="mt-2">
+                        <small class="text-muted"><i class="bi bi-camera me-1"></i>${fv.photos.length} photo(s)</small>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            ${fv.photos.map(p => `
+                                <div class="position-relative" style="width:80px;height:80px;">
+                                    <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}" 
+                                        class="rounded border" style="width:80px;height:80px;object-fit:cover;cursor:pointer;"
+                                        onclick="window.open(this.src,'_blank')">
+                                    ${isAssignee ? `<button class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo" 
+                                        data-fv-id="${fv.id}" data-photo-id="${p.id}" style="width:18px;height:18px;font-size:10px;" title="Delete">
+                                        <i class="bi bi-x"></i></button>` : ''}
+                                </div>`).join('')}
+                        </div>
+                    </div>` : ''}
                 ${fv.completedAt ? `<div class="small text-success mt-1">Completed: ${formatDate(fv.completedAt)}</div>` : ''}
-                ${canEdit && fv.status !== 'Completed' ? `<div class="mt-2"><button class="btn btn-outline-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Complete</button></div>` : ''}
+                <div class="mt-2 d-flex gap-2">
+                    ${isAssignee ? `
+                        <label class="btn btn-outline-secondary btn-sm mb-0">
+                            <i class="bi bi-camera me-1"></i>Upload Photos
+                            <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
+                        </label>
+                        <button class="btn btn-outline-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Complete</button>` : ''}
+                </div>
             </div></div>`;
         });
     }
+
+    // Assign Visit modal
+    html += `<div class="modal fade" id="assignFvModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title mb-0">Assign Field Visit</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="fv-engineer-select" class="form-label">Select Engineer (JE / TS)</label>
+                    <select class="form-select" id="fv-engineer-select" required>
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-assign-fv">Assign</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
     c.innerHTML = html;
 
+    // Wire: Assign Visit button → open modal and load engineers
     const btnAssign = document.getElementById('btn-assign-fv');
     if (btnAssign) btnAssign.addEventListener('click', async () => {
-        const user = getUser();
-        const r = await api.post(`/proposals/${pid}/field-visits/assign`, { assignedToId: user.id });
-        if (r.success) { toast.success('Visit assigned'); await renderTab2(c, pid, canEdit); } else toast.error(r.error || 'Failed');
+        const modal = new bootstrap.Modal(document.getElementById('assignFvModal'));
+        const select = document.getElementById('fv-engineer-select');
+        select.innerHTML = '<option value="">Loading...</option>';
+        modal.show();
+
+        const engRes = await api.get(`/proposals/${pid}/field-visits/assignable-engineers`);
+        if (engRes.success && engRes.data) {
+            select.innerHTML = '<option value="">— Select an Engineer —</option>' +
+                engRes.data.map(e => `<option value="${e.id}">${escapeHtml(e.fullName_En)} (${e.role}${e.departmentName ? ' — ' + escapeHtml(e.departmentName) : ''})</option>`).join('');
+        } else {
+            select.innerHTML = '<option value="">No engineers found</option>';
+        }
     });
 
+    // Wire: Confirm assign
+    document.getElementById('btn-confirm-assign-fv')?.addEventListener('click', async () => {
+        const engineerId = document.getElementById('fv-engineer-select').value;
+        if (!engineerId) { toast.error('Please select an engineer'); return; }
+        const r = await api.post(`/proposals/${pid}/field-visits/assign`, { assignedToId: engineerId });
+        bootstrap.Modal.getInstance(document.getElementById('assignFvModal'))?.hide();
+        if (r.success) { toast.success('Visit assigned'); await renderTab2(c, pid, canEdit); } 
+        else toast.error(r.error || 'Failed to assign');
+    });
+
+    // Wire: Complete buttons
     c.querySelectorAll('.btn-complete-fv').forEach(btn =>
         btn.addEventListener('click', async () => {
             const r = await api.post(`/proposals/${pid}/field-visits/${btn.dataset.id}/complete`);
             if (r.success) { toast.success('Visit completed'); await renderTab2(c, pid, canEdit); } else toast.error(r.error || 'Failed');
+        })
+    );
+
+    // Wire: Photo upload inputs
+    c.querySelectorAll('.fv-photo-input').forEach(input =>
+        input.addEventListener('change', async (e) => {
+            const fvId = input.dataset.id;
+            const files = e.target.files;
+            if (!files.length) return;
+
+            for (const file of files) {
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('caption', '');
+                const r = await api.upload(`/proposals/${pid}/field-visits/${fvId}/photos`, fd);
+                if (!r.success) { toast.error(r.error || `Failed to upload ${file.name}`); return; }
+            }
+            toast.success(`${files.length} photo(s) uploaded`);
+            await renderTab2(c, pid, canEdit);
+        })
+    );
+
+    // Wire: Delete photo buttons
+    c.querySelectorAll('.btn-del-photo').forEach(btn =>
+        btn.addEventListener('click', async () => {
+            if (!confirm('Delete this photo?')) return;
+            const r = await api.delete(`/proposals/${pid}/field-visits/${btn.dataset.fvId}/photos/${btn.dataset.photoId}`);
+            if (r.success) { toast.success('Photo deleted'); await renderTab2(c, pid, canEdit); } else toast.error(r.error || 'Failed');
         })
     );
 }
