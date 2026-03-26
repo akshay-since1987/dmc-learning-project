@@ -77,14 +77,7 @@ export async function renderAdminMastersPage() {
                     <form id="master-form">
                         <div class="modal-body">
                             <input type="hidden" id="masterId">
-                            <div class="mb-3">
-                                <label for="mNameEn" class="form-label">Name (English) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="mNameEn" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="mNameMr" class="form-label">नाव (मराठी)</label>
-                                <input type="text" class="form-control" id="mNameMr" lang="mr">
-                            </div>
+                            <div id="dual-masterName-container"></div>
                             <div class="mb-3" id="codeField">
                                 <label for="mCode" class="form-label">Code</label>
                                 <input type="text" class="form-control" id="mCode">
@@ -186,12 +179,24 @@ async function loadMasters(search) {
     });
 }
 
+let masterNameDual = null;
+
 function openMasterModal(item) {
     const singular = singularize(activeMasterType.label);
     document.getElementById('masterModalTitle').textContent = item ? `Edit ${singular}` : `Add ${singular}`;
     document.getElementById('masterId').value = item?.id || '';
-    document.getElementById('mNameEn').value = item?.name_En || '';
-    document.getElementById('mNameMr').value = item?.name_Mr || '';
+
+    // Recreate dual-lang input each time modal opens
+    const container = document.getElementById('dual-masterName-container');
+    container.innerHTML = '';
+    masterNameDual = createDualLangInput({
+        name: 'masterName', label: 'Name', type: 'text',
+        required: true, maxLength: 200,
+        valueEn: item?.name_En || '', valueMr: item?.name_Mr || '',
+        placeholderEn: 'Name in English', placeholderMr: 'नाव मराठीत'
+    });
+    container.appendChild(masterNameDual);
+
     document.getElementById('mCode').value = item?.code || '';
     document.getElementById('codeField').style.display = activeMasterType.hasCode ? '' : 'none';
     new bootstrap.Modal(document.getElementById('masterModal')).show();
@@ -200,9 +205,10 @@ function openMasterModal(item) {
 async function saveMaster(e) {
     e.preventDefault();
     const id = document.getElementById('masterId').value;
+    const vals = masterNameDual.getValues();
     const body = {
-        name_En: document.getElementById('mNameEn').value,
-        name_Mr: document.getElementById('mNameMr').value || null,
+        name_En: vals.en,
+        name_Mr: vals.mr || null,
         code: document.getElementById('mCode').value || null
     };
 

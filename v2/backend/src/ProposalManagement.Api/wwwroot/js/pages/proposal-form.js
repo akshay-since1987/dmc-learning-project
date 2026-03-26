@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { getUser } from '../auth.js';
 import { toast } from '../toast.js';
 import { escapeHtml } from '../utils.js';
+import { createDualLangInput } from '../dual-lang-input.js';
 
 export async function renderProposalFormPage(params = {}) {
     const content = document.getElementById('page-content');
@@ -84,14 +85,7 @@ export async function renderProposalFormPage(params = {}) {
                             <label for="area" class="form-label">Area</label>
                             <input type="text" class="form-control" id="area" value="${escapeHtml(existing?.area || '')}" placeholder="Area/locality name">
                         </div>
-                        <div class="col-md-6">
-                            <label for="locationAddress_En" class="form-label">Location Address (English)</label>
-                            <textarea class="form-control" id="locationAddress_En" rows="2">${escapeHtml(existing?.locationAddress_En || '')}</textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="locationAddress_Mr" class="form-label">स्थळाचा पत्ता (मराठी)</label>
-                            <textarea class="form-control" id="locationAddress_Mr" rows="2" lang="mr">${escapeHtml(existing?.locationAddress_Mr || '')}</textarea>
-                        </div>
+                        <div class="col-12" id="dual-locationAddress-container"></div>
                     </div>
                 </div>
             </div>
@@ -100,25 +94,8 @@ export async function renderProposalFormPage(params = {}) {
                 <div class="card-header"><h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Work Details</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="workTitle_En" class="form-label">Work Title (English) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="workTitle_En" required maxlength="500"
-                                value="${escapeHtml(existing?.workTitle_En || '')}" placeholder="Title of the proposed work">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="workTitle_Mr" class="form-label">कामाचे शीर्षक (मराठी)</label>
-                            <input type="text" class="form-control" id="workTitle_Mr" maxlength="500" lang="mr"
-                                value="${escapeHtml(existing?.workTitle_Mr || '')}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="workDescription_En" class="form-label">Work Description (English) <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="workDescription_En" rows="4" required maxlength="4000"
-                                placeholder="Detailed description of the proposed work...">${escapeHtml(existing?.workDescription_En || '')}</textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="workDescription_Mr" class="form-label">कामाचे वर्णन (मराठी)</label>
-                            <textarea class="form-control" id="workDescription_Mr" rows="4" maxlength="4000" lang="mr">${escapeHtml(existing?.workDescription_Mr || '')}</textarea>
-                        </div>
+                        <div class="col-12" id="dual-workTitle-container"></div>
+                        <div class="col-12" id="dual-workDescription-container"></div>
                     </div>
                 </div>
             </div>
@@ -181,6 +158,31 @@ export async function renderProposalFormPage(params = {}) {
             </div>
         </form>`;
 
+    // ── Dual-language input components ──
+    const dualLocationAddress = createDualLangInput({
+        name: 'locationAddress', label: 'Location Address', type: 'textarea',
+        required: false, rows: 2, maxLength: 500,
+        valueEn: existing?.locationAddress_En || '', valueMr: existing?.locationAddress_Mr || '',
+        placeholderEn: 'Location address in English', placeholderMr: 'स्थळाचा पत्ता मराठीत'
+    });
+    document.getElementById('dual-locationAddress-container').appendChild(dualLocationAddress);
+
+    const dualWorkTitle = createDualLangInput({
+        name: 'workTitle', label: 'Work Title', type: 'text',
+        required: true, maxLength: 500,
+        valueEn: existing?.workTitle_En || '', valueMr: existing?.workTitle_Mr || '',
+        placeholderEn: 'Title of the proposed work', placeholderMr: 'प्रस्तावित कामाचे शीर्षक'
+    });
+    document.getElementById('dual-workTitle-container').appendChild(dualWorkTitle);
+
+    const dualWorkDescription = createDualLangInput({
+        name: 'workDescription', label: 'Work Description', type: 'textarea',
+        required: true, rows: 4, maxLength: 4000,
+        valueEn: existing?.workDescription_En || '', valueMr: existing?.workDescription_Mr || '',
+        placeholderEn: 'Detailed description of the proposed work...', placeholderMr: 'प्रस्तावित कामाचे सविस्तर वर्णन...'
+    });
+    document.getElementById('dual-workDescription-container').appendChild(dualWorkDescription);
+
     // ── Cascading dropdowns ──
 
     // Dept → Work Categories
@@ -242,12 +244,12 @@ export async function renderProposalFormPage(params = {}) {
             zoneId: zoneSelect.value,
             prabhagId: prabhagSelect.value,
             area: document.getElementById('area').value.trim() || null,
-            locationAddress_En: document.getElementById('locationAddress_En').value.trim() || null,
-            locationAddress_Mr: document.getElementById('locationAddress_Mr').value.trim() || null,
-            workTitle_En: document.getElementById('workTitle_En').value.trim(),
-            workTitle_Mr: document.getElementById('workTitle_Mr').value.trim() || null,
-            workDescription_En: document.getElementById('workDescription_En').value.trim(),
-            workDescription_Mr: document.getElementById('workDescription_Mr').value.trim() || null,
+            locationAddress_En: dualLocationAddress.getValues().en || null,
+            locationAddress_Mr: dualLocationAddress.getValues().mr || null,
+            workTitle_En: dualWorkTitle.getValues().en,
+            workTitle_Mr: dualWorkTitle.getValues().mr || null,
+            workDescription_En: dualWorkDescription.getValues().en,
+            workDescription_Mr: dualWorkDescription.getValues().mr || null,
             requestSourceId: document.getElementById('requestSourceId').value || null,
             requestorName: document.getElementById('requestorName').value.trim() || null,
             requestorMobile: document.getElementById('requestorMobile').value.trim() || null,

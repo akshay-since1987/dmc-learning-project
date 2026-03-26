@@ -301,6 +301,24 @@ body {
     }
 }
 
+/* ── Dual-Language Inputs ── */
+.dual-lang-group .input-group-text {
+    min-width: 38px;
+    justify-content: center;
+    font-weight: 600;
+    background: #f0f0f0;
+}
+.dual-lang-group .translating {
+    background: linear-gradient(90deg, #f8f9fa 25%, #e9ecef 50%, #f8f9fa 75%);
+    background-size: 200% 100%;
+    animation: translating-shimmer 1.2s ease infinite;
+}
+@keyframes translating-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.border-dashed { border-style: dashed !important; }
+
 /* ── Print ── */
 @media print {
     .app-header, .app-sidebar, #toast-container,

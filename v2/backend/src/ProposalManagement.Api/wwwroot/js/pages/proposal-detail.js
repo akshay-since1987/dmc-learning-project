@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { getUser, hasRole } from '../auth.js';
 import { toast } from '../toast.js';
 import { stageBadge, formatDate, formatCurrency, escapeHtml } from '../utils.js';
+import { bilingualDisplay } from '../dual-lang-input.js';
 
 let currentProposal = null;
 let currentTab = '1';
@@ -136,9 +137,9 @@ function renderTab1(c) {
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Zone</label><div>${escapeHtml(p.zoneName || '—')}</div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Prabhag</label><div>${escapeHtml(p.prabhagName || '—')}</div></div>
             <div class="col-md-4"><label class="form-label text-muted small mb-0">Area</label><div>${escapeHtml(p.area || '—')}</div></div>
-            <div class="col-12"><label class="form-label text-muted small mb-0">Work Title</label><div class="fw-medium">${escapeHtml(p.workTitle_En)}</div>${p.workTitle_Mr ? `<div class="text-muted" lang="mr">${escapeHtml(p.workTitle_Mr)}</div>` : ''}</div>
-            <div class="col-12"><label class="form-label text-muted small mb-0">Description</label><div>${escapeHtml(p.workDescription_En)}</div>${p.workDescription_Mr ? `<div class="text-muted" lang="mr">${escapeHtml(p.workDescription_Mr)}</div>` : ''}</div>
-            <div class="col-12"><label class="form-label text-muted small mb-0">Location Address</label><div>${escapeHtml(p.locationAddress_En || '—')}</div></div>
+            ${bilingualDisplay('Work Title', p.workTitle_En, p.workTitle_Mr)}
+            ${bilingualDisplay('Work Description', p.workDescription_En, p.workDescription_Mr)}
+            ${bilingualDisplay('Location Address', p.locationAddress_En, p.locationAddress_Mr)}
             ${p.requestSourceName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Request Source</label><div>${escapeHtml(p.requestSourceName)}</div></div>` : ''}
             ${p.requestorName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Requestor</label><div>${escapeHtml(p.requestorName)}</div></div>` : ''}
             ${p.requestorMobile ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Requestor Mobile</label><div>${escapeHtml(p.requestorMobile)}</div></div>` : ''}
