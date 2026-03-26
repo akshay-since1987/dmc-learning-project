@@ -62,7 +62,7 @@ export async function renderProposalDetailPage(params) {
             <li class="nav-item"><button class="nav-link" data-tab="5"><i class="bi bi-receipt me-1"></i>PRAMA</button></li>
             <li class="nav-item"><button class="nav-link" data-tab="6"><i class="bi bi-wallet2 me-1"></i>Budget</button></li>
             <li class="nav-item"><button class="nav-link" data-tab="timeline"><i class="bi bi-clock-history me-1"></i>Timeline</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="docs"><i class="bi bi-paperclip me-1"></i>Docs</button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="docs"><i class="bi bi-paperclip me-1"></i>Additional Docs</button></li>
         </ul>
 
         <div class="card border-top-0 rounded-0 rounded-bottom">
@@ -149,53 +149,98 @@ function renderTab1(c) {
 async function renderTab2(c, pid, canEdit) {
     const res = await api.get(`/proposals/${pid}/field-visits`);
     const visits = res.success ? (res.data || []) : [];
+    const totalPhotos = visits.reduce((sum, fv) => sum + (fv.photos?.length || 0), 0);
+    const hasCompleted = visits.some(fv => fv.status === 'Completed' && fv.photos?.length > 0);
 
     let html = `<div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0"><i class="bi bi-geo-alt me-1"></i>Field Visits (${visits.length})</h6>
         ${canEdit ? `<button class="btn btn-primary btn-sm" id="btn-assign-fv"><i class="bi bi-plus me-1"></i>Assign Visit</button>` : ''}
     </div>`;
 
+    // ── Mandatory photo status banner ──
+    if (!hasCompleted) {
+        html += `<div class="alert alert-warning d-flex align-items-center py-2 mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div><strong>Field visit photos are mandatory.</strong> At least one completed field visit with photos is required before the proposal can be submitted for approval.</div>
+        </div>`;
+    } else {
+        html += `<div class="alert alert-success d-flex align-items-center py-2 mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div><strong>${totalPhotos} photo(s) uploaded</strong> across ${visits.filter(fv => fv.status === 'Completed').length} completed visit(s). Field visit requirement satisfied.</div>
+        </div>`;
+    }
+
     if (visits.length === 0) {
-        html += '<p class="text-muted">No field visits assigned yet.</p>';
+        html += '<p class="text-muted">No field visits assigned yet. Assign a visit to begin site inspection.</p>';
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
             const isAssignee = canEdit && fv.status !== 'Completed';
-            html += `<div class="card mb-2"><div class="card-body py-2 px-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div><strong>Visit #${fv.visitNumber}</strong><span class="badge bg-${sBg} ms-2">${fv.status}</span>
-                        <span class="text-muted ms-2 small">Assigned: ${escapeHtml(fv.assignedToName || '—')}</span></div>
+            const photoCount = fv.photos?.length || 0;
+
+            html += `<div class="card mb-3 ${fv.status === 'Completed' ? 'border-success' : ''}">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Visit #${fv.visitNumber}</strong>
+                        <span class="badge bg-${sBg} ms-2">${fv.status}</span>
+                        <span class="text-muted ms-2 small">Assigned: ${escapeHtml(fv.assignedToName || '—')}</span>
+                    </div>
                     <small class="text-muted">${formatDate(fv.createdAt)}</small>
                 </div>
-                ${fv.siteConditionName ? `<div class="small mt-1">Site: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
-                ${fv.problemDescription_En ? `<div class="small mt-1">${escapeHtml(fv.problemDescription_En)}</div>` : ''}
-                ${fv.recommendation_En ? `<div class="small mt-1 text-success">Rec: ${escapeHtml(fv.recommendation_En)}</div>` : ''}
-                ${fv.gpsLatitude ? `<div class="small mt-1 text-muted"><i class="bi bi-geo-alt"></i> ${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
-                ${fv.photos && fv.photos.length > 0 ? `
-                    <div class="mt-2">
-                        <small class="text-muted"><i class="bi bi-camera me-1"></i>${fv.photos.length} photo(s)</small>
-                        <div class="d-flex flex-wrap gap-2 mt-1">
-                            ${fv.photos.map(p => `
-                                <div class="position-relative" style="width:80px;height:80px;">
-                                    <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}" 
-                                        class="rounded border" style="width:80px;height:80px;object-fit:cover;cursor:pointer;"
-                                        onclick="window.open(this.src,'_blank')">
-                                    ${isAssignee ? `<button class="btn btn-sm btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo" 
-                                        data-fv-id="${fv.id}" data-photo-id="${p.id}" style="width:18px;height:18px;font-size:10px;" title="Delete">
-                                        <i class="bi bi-x"></i></button>` : ''}
-                                </div>`).join('')}
+                <div class="card-body py-3">
+                    ${fv.siteConditionName ? `<div class="small mb-1">Site Condition: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
+                    ${fv.problemDescription_En ? `<div class="small mb-1">${escapeHtml(fv.problemDescription_En)}</div>` : ''}
+                    ${fv.recommendation_En ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>Rec: ${escapeHtml(fv.recommendation_En)}</div>` : ''}
+                    ${fv.gpsLatitude ? `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
+                    ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>Completed: ${formatDate(fv.completedAt)}</div>` : ''}
+
+                    <!-- ── Site Photos Section ── -->
+                    <div class="border rounded p-3 bg-light mt-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 small fw-bold"><i class="bi bi-images me-1"></i>Site Photos (${photoCount})</h6>
+                            ${isAssignee ? `<label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
+                                <i class="bi bi-camera-fill me-1"></i>Upload Photos
+                                <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
+                            </label>` : ''}
                         </div>
-                    </div>` : ''}
-                ${fv.completedAt ? `<div class="small text-success mt-1">Completed: ${formatDate(fv.completedAt)}</div>` : ''}
-                <div class="mt-2 d-flex gap-2">
-                    ${isAssignee ? `
-                        <label class="btn btn-outline-secondary btn-sm mb-0">
-                            <i class="bi bi-camera me-1"></i>Upload Photos
-                            <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
-                        </label>
-                        <button class="btn btn-outline-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Complete</button>` : ''}
+
+                        ${photoCount === 0 && isAssignee ? `
+                            <div class="text-center py-4 border border-2 border-dashed rounded bg-white fv-drop-zone" data-id="${fv.id}">
+                                <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
+                                <p class="text-muted mb-1">Drag & drop site photos here</p>
+                                <p class="text-muted small mb-0">or click "Upload Photos" above (JPEG, PNG, WebP — max 5 MB each)</p>
+                            </div>` : ''}
+
+                        ${photoCount === 0 && !isAssignee ? `<p class="text-muted small mb-0">No photos uploaded yet.</p>` : ''}
+
+                        ${photoCount > 0 ? `
+                            <div class="d-flex flex-wrap gap-2">
+                                ${fv.photos.map(p => `
+                                    <div class="position-relative border rounded overflow-hidden" style="width:110px;height:110px;">
+                                        <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}"
+                                            class="w-100 h-100" style="object-fit:cover;cursor:pointer;"
+                                            onclick="window.open(this.src,'_blank')" title="Click to view full size">
+                                        ${isAssignee ? `<button class="btn btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo rounded-0"
+                                            data-fv-id="${fv.id}" data-photo-id="${p.id}" style="width:22px;height:22px;font-size:11px;opacity:0.85;" title="Delete photo">
+                                            <i class="bi bi-x-lg"></i></button>` : ''}
+                                    </div>`).join('')}
+                                ${isAssignee ? `
+                                    <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white" 
+                                        style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
+                                        <div class="text-center text-muted">
+                                            <i class="bi bi-plus-lg fs-4"></i><br><small>Add more</small>
+                                        </div>
+                                        <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
+                                    </label>` : ''}
+                            </div>` : ''}
+                    </div>
+
+                    ${isAssignee && !fv.completedAt ? `
+                        <div class="mt-3">
+                            <button class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Mark as Complete</button>
+                        </div>` : ''}
                 </div>
-            </div></div>`;
+            </div>`;
         });
     }
 
@@ -258,7 +303,7 @@ async function renderTab2(c, pid, canEdit) {
         })
     );
 
-    // Wire: Photo upload inputs
+    // Wire: Photo upload inputs (both "Upload Photos" buttons and "Add more" tiles)
     c.querySelectorAll('.fv-photo-input').forEach(input =>
         input.addEventListener('change', async (e) => {
             const fvId = input.dataset.id;
@@ -266,6 +311,7 @@ async function renderTab2(c, pid, canEdit) {
             if (!files.length) return;
 
             for (const file of files) {
+                if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} exceeds 5 MB limit`); return; }
                 const fd = new FormData();
                 fd.append('file', file);
                 fd.append('caption', '');
@@ -276,6 +322,31 @@ async function renderTab2(c, pid, canEdit) {
             await renderTab2(c, pid, canEdit);
         })
     );
+
+    // Wire: Drag-and-drop on drop zones
+    c.querySelectorAll('.fv-drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('border-primary', 'bg-primary', 'bg-opacity-10'); });
+        zone.addEventListener('dragleave', () => { zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10'); });
+        zone.addEventListener('drop', async e => {
+            e.preventDefault();
+            zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+            const fvId = zone.dataset.id;
+            const files = e.dataTransfer.files;
+            if (!files.length) return;
+
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) { toast.error(`${file.name} is not an image`); continue; }
+                if (file.size > 5 * 1024 * 1024) { toast.error(`${file.name} exceeds 5 MB limit`); continue; }
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('caption', '');
+                const r = await api.upload(`/proposals/${pid}/field-visits/${fvId}/photos`, fd);
+                if (!r.success) { toast.error(r.error || `Failed to upload ${file.name}`); return; }
+            }
+            toast.success('Photo(s) uploaded');
+            await renderTab2(c, pid, canEdit);
+        });
+    });
 
     // Wire: Delete photo buttons
     c.querySelectorAll('.btn-del-photo').forEach(btn =>
@@ -598,6 +669,14 @@ async function renderDocuments(c, pid, canEdit) {
 // ── Workflow button wiring ───────────────────────────────────
 function wireWorkflowButtons(id, params) {
     document.getElementById('btn-submit')?.addEventListener('click', async () => {
+        // Pre-check: field visit with photos required
+        const fvRes = await api.get(`/proposals/${id}/field-visits`);
+        const visits = fvRes.success ? (fvRes.data || []) : [];
+        const hasCompletedWithPhotos = visits.some(fv => fv.status === 'Completed' && fv.photos?.length > 0);
+        if (!hasCompletedWithPhotos) {
+            toast.error('At least one completed field visit with photos is required before submission. Go to the Field Visit tab to upload site photos.');
+            return;
+        }
         if (!confirm('Submit this proposal for approval?')) return;
         const r = await api.post(`/workflow/${id}/submit`);
         if (r.success) { toast.success('Submitted'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');

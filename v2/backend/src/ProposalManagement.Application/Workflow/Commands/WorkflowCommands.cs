@@ -35,6 +35,14 @@ public class SubmitProposalHandler : IRequestHandler<SubmitProposalCommand, Resu
         if (proposal.CurrentStage is not (nameof(ProposalStage.Draft) or nameof(ProposalStage.PushedBack)))
             return Result.Failure("Proposal must be in Draft or PushedBack to submit");
 
+        // Validate: at least one completed field visit with photos is required
+        var hasCompletedVisitWithPhotos = await _db.FieldVisits
+            .Where(fv => fv.ProposalId == request.ProposalId && fv.Status == "Completed")
+            .AnyAsync(fv => fv.Photos.Any(), ct);
+
+        if (!hasCompletedVisitWithPhotos)
+            return Result.Failure("At least one completed field visit with uploaded photos is required before submission");
+
         // First approver in chain is CityEngineer
         var nextOwner = await _db.Users
             .FirstOrDefaultAsync(u => u.Role == nameof(UserRole.CityEngineer) && u.PalikaId == proposal.PalikaId, ct);
