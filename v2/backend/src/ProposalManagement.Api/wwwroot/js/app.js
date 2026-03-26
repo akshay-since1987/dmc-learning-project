@@ -10,6 +10,7 @@ import { renderProposalListPage } from './pages/proposal-list.js';
 import { renderProposalDetailPage } from './pages/proposal-detail.js';
 import { renderProposalFormPage } from './pages/proposal-form.js';
 import { renderAdminUsersPage } from './pages/admin-users.js';
+import { renderAdminMastersPage } from './pages/admin-masters.js';
 import { renderAuditTrailPage } from './pages/audit-trail.js';
 
 // ── Register routes ──
@@ -70,6 +71,11 @@ registerRoute('/proposals/:id', async (params) => {
 registerRoute('/admin/users', async () => {
     renderLayout();
     await renderAdminUsersPage();
+});
+
+registerRoute('/admin/masters', async () => {
+    renderLayout();
+    await renderAdminMastersPage();
 });
 
 // Audit trail — Lotus, Commissioner, Auditor

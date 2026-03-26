@@ -33,4 +33,21 @@ public class AdminController : BaseController
     [HttpDelete("users/{id:guid}")]
     public async Task<IActionResult> DeleteUser(Guid id)
         => ToActionResult(await Mediator.Send(new DeleteUserCommand(id)));
+
+    // ── Masters ──
+    [HttpGet("masters/{entityType}")]
+    public async Task<IActionResult> GetMasterItems(string entityType, [FromQuery] string? search = null)
+        => ToActionResult(await Mediator.Send(new GetMasterItemsQuery(entityType, search)));
+
+    [HttpPost("masters/{entityType}")]
+    public async Task<IActionResult> SaveMaster(string entityType, [FromBody] SaveMasterCommand command)
+        => ToActionResult(await Mediator.Send(command with { EntityType = entityType }));
+
+    [HttpPut("masters/{entityType}/{id:guid}")]
+    public async Task<IActionResult> UpdateMaster(string entityType, Guid id, [FromBody] SaveMasterCommand command)
+        => ToActionResult(await Mediator.Send(command with { EntityType = entityType, Id = id }));
+
+    [HttpDelete("masters/{entityType}/{id:guid}")]
+    public async Task<IActionResult> DeleteMaster(string entityType, Guid id)
+        => ToActionResult(await Mediator.Send(new DeleteMasterCommand(entityType, id)));
 }

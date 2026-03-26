@@ -5,4 +5,7 @@
     <Project Path="src/ProposalManagement.Domain/ProposalManagement.Domain.csproj" />
     <Project Path="src/ProposalManagement.Infrastructure/ProposalManagement.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ProposalManagement.Tests/ProposalManagement.Tests.csproj" />
+  </Folder>
 </Solution>
