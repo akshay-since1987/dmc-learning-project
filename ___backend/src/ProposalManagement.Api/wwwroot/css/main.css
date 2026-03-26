@@ -1,0 +1,118 @@
+/* === Main Stylesheet === */
+@import url('variables.css');
+
+/* Reset & Base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility: hidden but accessible to screen readers */
+.visually-hidden:not(:focus):not(:active) {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: var(--spacing-md);
+  background: var(--primary);
+  color: #fff;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  z-index: 9999;
+  text-decoration: none;
+  font-weight: 600;
+  transition: top var(--transition-fast);
+}
+
+.skip-link:focus {
+  top: var(--spacing-sm);
+}
+
+/* Status badges */
+.badge-stage {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25em 0.65em;
+  border-radius: 50rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.badge-draft { background: #e2e3e5; color: #41464b; }
+.badge-submitted { background: #cff4fc; color: #055160; }
+.badge-at-city-engineer { background: #fff3cd; color: #664d03; }
+.badge-at-chief-accountant { background: #f8d7da; color: #842029; }
+.badge-at-deputy-commissioner { background: #d1e7dd; color: #0f5132; }
+.badge-at-commissioner { background: #cfe2ff; color: #084298; }
+.badge-approved { background: #198754; color: #ffffff; }
+.badge-pushed-back { background: #dc3545; color: #ffffff; }
+
+/* Loading spinner */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-xxl) var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+/* General card overrides */
+.card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow);
+}

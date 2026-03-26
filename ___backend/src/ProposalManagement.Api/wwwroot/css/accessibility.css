@@ -1,0 +1,78 @@
+/* === Accessibility Styles (WCAG 2.1 AA) === */
+
+/* Focus visible outlines */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* For buttons and interactive elements, use box-shadow for rounded corners */
+button:focus-visible,
+.btn:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* Ensure links are distinguishable */
+a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Navigation links don't need underline */
+nav a,
+.sidebar-nav-link,
+.dropdown-item {
+  text-decoration: none;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* High contrast mode support */
+@media (forced-colors: active) {
+  .badge-stage {
+    border: 1px solid;
+  }
+
+  .timeline-dot {
+    forced-color-adjust: none;
+  }
+
+  .sidebar {
+    border-right: 1px solid;
+  }
+}
+
+/* Ensure minimum touch target size (44x44px) on mobile */
+@media (pointer: coarse) {
+  .btn,
+  .sidebar-nav-link,
+  .dropdown-item,
+  .page-link {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

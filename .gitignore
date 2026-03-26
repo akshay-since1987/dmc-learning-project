@@ -1,0 +1,81 @@
+# ─────────────────────────────────────────────────────────
+# ProposalManagement — .gitignore
+# ─────────────────────────────────────────────────────────
+
+# ── .NET / Visual Studio ──
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+*.nupkg
+*.snupkg
+*.dll
+*.exe
+*.pdb
+project.lock.json
+project.fragment.lock.json
+artifacts/
+**/PublishOutput/
+**/Properties/launchSettings.json
+
+# ── Build check / publish output folders ──
+___backend/_buildcheck/
+___backend/_buildcheck_submitfix/
+___backend/_buildcheck_termssign/
+
+# ── NuGet ──
+**/packages/
+*.nuget.props
+*.nuget.targets
+
+# ── Build outputs ──
+[Ll]og/
+[Ll]ogs/
+TestResults/
+BenchmarkDotNet.Artifacts/
+
+# ── User-specific files ──
+*.rsuser
+*.pidb
+*.dbmdl
+*.jfm
+*.pfx
+*.publishsettings
+orleans.codegen.cs
+
+# ── IDE ──
+.idea/
+*.swp
+*~
+
+# ── OS ──
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ── Secrets & Environment ──
+.env
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Staging.json
+
+# ── Uploads / Runtime data ──
+uploads/
+wwwroot/images/signatures/
+
+# ── Temp files from dev/testing ──
+temp.json
+temp_otp.json
+
+# ── Docker (keep compose/Dockerfile, ignore runtime) ──
+docker-data/
+
+# ── Node modules (if npm build added later) ──
+node_modules/
+dist/

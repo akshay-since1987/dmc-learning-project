@@ -1,0 +1,39 @@
+/* === Print Styles === */
+@media print {
+  .sidebar,
+  .app-header,
+  .sidebar-overlay,
+  .toast-container,
+  .btn,
+  .action-group,
+  .no-print {
+    display: none !important;
+  }
+
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 12pt;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #999;
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+
+  nav a[href]::after {
+    content: none;
+  }
+}

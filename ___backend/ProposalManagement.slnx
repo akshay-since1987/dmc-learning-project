@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ProposalManagement.Api/ProposalManagement.Api.csproj" />
+    <Project Path="src/ProposalManagement.Application/ProposalManagement.Application.csproj" />
+    <Project Path="src/ProposalManagement.Domain/ProposalManagement.Domain.csproj" />
+    <Project Path="src/ProposalManagement.Infrastructure/ProposalManagement.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ProposalManagement.Api.Tests/ProposalManagement.Api.Tests.csproj" />
+    <Project Path="tests/ProposalManagement.Application.Tests/ProposalManagement.Application.Tests.csproj" />
+    <Project Path="tests/ProposalManagement.Domain.Tests/ProposalManagement.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

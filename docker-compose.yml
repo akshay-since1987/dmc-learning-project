@@ -1,0 +1,75 @@
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # SQL Server 2022 (Linux) — self-contained database
+  # ─────────────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SQL_SA_PASSWORD}"
+      MSSQL_PID: "Express"
+    ports:
+      - "${SQL_PORT:-1433}:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          /opt/mssql-tools18/bin/sqlcmd
+          -S localhost -U sa -P "$$SA_PASSWORD"
+          -C -Q "SELECT 1" 2>/dev/null || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # Proposal Management API
+  # ─────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT:-5111}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
+
+      # Override the connection string from appsettings.json.
+      # Targets the sqlserver service above. Change to your external
+      # SQL Server address if you do not use the bundled sqlserver service.
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=dmc-PorposalManagement;User ID=sa;Password=${SQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true;"
+
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "${JWT_ISSUER:-ProposalManagement.Api}"
+      Jwt__Audience: "${JWT_AUDIENCE:-ProposalManagement.Client}"
+      Jwt__AccessTokenExpiryMinutes: "${JWT_ACCESS_EXPIRY_MINUTES:-15}"
+      Jwt__RefreshTokenExpiryDays: "${JWT_REFRESH_EXPIRY_DAYS:-7}"
+
+      # OTP simulation — set to false in production
+      Otp__SimulateOtp: "${OTP_SIMULATE:-false}"
+      Otp__DefaultOtp: "${OTP_DEFAULT:-}"
+
+      # SMS gateway (set your real values in .env)
+      SmsGateway__ApiUrl: "${SMS_API_URL:-}"
+      SmsGateway__ApiKey: "${SMS_API_KEY:-}"
+      SmsGateway__HttpMethod: "${SMS_HTTP_METHOD:-GET}"
+
+    volumes:
+      - uploads_data:/app/uploads
+      - signatures_data:/app/wwwroot/images/signatures
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ─────────────────────────────────────────────────────────────
+# Named volumes for persistent data
+# ─────────────────────────────────────────────────────────────
+volumes:
+  sqlserver_data:
+  uploads_data:
+  signatures_data:

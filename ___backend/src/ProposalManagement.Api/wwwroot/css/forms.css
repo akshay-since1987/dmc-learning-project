@@ -1,0 +1,167 @@
+/* === Form Styles === */
+
+/* Dual-language input pairs */
+.dual-lang-group {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.dual-lang-group > .form-group {
+  flex: 1;
+}
+
+.dual-lang-group .form-label .lang-tag {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  margin-left: var(--spacing-xs);
+  vertical-align: middle;
+}
+
+.lang-tag-en {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.lang-tag-alt {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+/* Form group spacing */
+.form-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+  display: block;
+  color: var(--text-primary);
+}
+
+.form-group .form-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Auto-translate button in dual-lang fields */
+.btn-auto-translate {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+}
+
+/* Translating indicator — subtle background pulse */
+.translating {
+  background-image: linear-gradient(90deg, transparent 0%, rgba(13,110,253,0.06) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: translate-pulse 1.2s ease-in-out infinite;
+}
+@keyframes translate-pulse {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Currency input wrapper */
+.currency-input {
+  position: relative;
+}
+
+.currency-input .currency-symbol {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.currency-input input {
+  padding-left: 1.75rem;
+}
+
+/* Checkbox/Radio custom groups */
+.check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+/* File upload area */
+.file-upload-area {
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.file-upload-area:hover,
+.file-upload-area.dragover {
+  border-color: var(--primary);
+  background: rgba(13, 110, 253, 0.03);
+}
+
+.file-upload-area i {
+  font-size: 2rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-sm);
+}
+
+.file-upload-area p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--spacing-md) 0 0;
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--border-light);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-xs);
+  font-size: 0.875rem;
+}
+
+/* OTP Input */
+.otp-input-group {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.otp-input-group input {
+  width: 48px;
+  height: 54px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  transition: border-color var(--transition-fast);
+}
+
+.otp-input-group input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+@media (max-width: 575.98px) {
+  .dual-lang-group {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,22 @@
+-- Schema Reference for dmc-PorposalManagement database
+-- Generated as part of Phase 1 scaffolding
+-- See EF Core migrations in backend/src/ProposalManagement.Infrastructure/Persistence/Migrations/
+
+-- Tables:
+-- 1.  Users                    - Auth & user profiles (with soft-delete)
+-- 2.  OtpRequests              - OTP login records
+-- 3.  RefreshTokens            - JWT refresh tokens
+-- 4.  Departments              - Master: departments (with soft-delete)
+-- 5.  Designations             - Master: job designations (with soft-delete)
+-- 6.  FundTypes                - Master: fund types (with soft-delete)
+-- 7.  AccountHeads             - Master: account heads (with soft-delete)
+-- 8.  Wards                    - Master: municipal wards (with soft-delete)
+-- 9.  ProcurementMethods       - Master: procurement methods (with soft-delete)
+-- 10. TenderPublicationPeriods - Master: tender periods (with soft-delete)
+-- 11. CorporationSettings      - Corporation configuration (single-row)
+-- 12. Proposals                - Proposal records (with soft-delete)
+-- 13. ProposalDocuments        - Uploaded documents for proposals (with soft-delete)
+-- 14. ProposalStageHistory     - Workflow approval timeline
+-- 15. GeneratedDocuments       - System-generated PDFs
+-- 16. AuditTrails              - Immutable audit log (INSERT-only)
+-- 17. NotificationLogs         - SMS/notification records

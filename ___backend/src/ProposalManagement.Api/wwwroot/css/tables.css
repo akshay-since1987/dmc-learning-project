@@ -1,0 +1,51 @@
+/* Data table overrides & Lotus admin styling */
+
+.table > :not(caption) > * > * {
+  padding: 0.65rem 0.85rem;
+}
+
+.table-hover > tbody > tr {
+  transition: background-color 0.15s ease;
+}
+
+.table > thead > tr > th {
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom-width: 2px;
+}
+
+/* Input group inside card header */
+.card-header .input-group .form-control:focus {
+  box-shadow: none;
+  border-color: var(--primary);
+}
+
+/* Pagination */
+.pagination .page-link {
+  font-size: 0.85rem;
+  border-radius: 0.375rem;
+  margin: 0 2px;
+  min-width: 2rem;
+  text-align: center;
+}
+
+/* Stat cards in Lotus dashboard */
+.lotus-stat-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.lotus-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.08) !important;
+}
+
+/* Badge sizing in tables */
+.table .badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35em 0.6em;
+}

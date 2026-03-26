@@ -1,0 +1,42 @@
+# .NET build output
+backend/**/bin/
+backend/**/obj/
+backend/**/_buildcheck*/
+
+# Test projects — not needed in image
+backend/tests/
+
+# VS / Rider IDE
+.vs/
+**/.idea/
+**/*.user
+**/*.suo
+
+# Secrets / local overrides
+**/*secrets*.json
+**/appsettings.*.json
+!**/appsettings.json
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker files themselves (avoid recursive copy)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+.env
+.env.*
+
+# Frontend source (src/ is currently empty; wwwroot is bundled with publish)
+src/
+
+# Misc
+*.md
+*.zip
+*.log
+ProposalManagement.zip
+req.json
+temp*.json
+seed_users.sql
