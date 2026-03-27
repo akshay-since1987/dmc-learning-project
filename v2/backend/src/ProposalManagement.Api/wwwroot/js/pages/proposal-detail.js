@@ -73,13 +73,15 @@ export async function renderProposalDetailPage(params) {
 
         <!-- Approve Modal -->
         <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-dialog modal-lg"><div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">${tBilingual('workflow.approveTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form id="approve-form"><div class="modal-body">
                     <div class="mb-3"><label for="opinion" class="form-label">${t('workflow.opinion')} (English)</label><textarea class="form-control" id="opinion" rows="2" placeholder="${t('workflow.opinionPlaceholder')}"></textarea></div>
                     <div class="mb-3"><label for="opinion-mr" class="form-label">${t('workflow.opinion', 'mr')} (मराठी)</label><textarea class="form-control" id="opinion-mr" rows="2" lang="mr" placeholder="${t('workflow.opinionPlaceholder', 'mr')}"></textarea></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="disclaimer-check" required><label class="form-check-label" for="disclaimer-check">${t('workflow.disclaimer')}</label></div>
-                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-success" data-i18n="workflow.confirmApprove">Confirm Approve</button></div></form>
+                    <div class="mb-3"><label for="approve-sig-file" class="form-label">${t('workflow.signatureUpload')}</label><input type="file" class="form-control form-control-sm" id="approve-sig-file" accept="image/png,image/jpeg,image/svg+xml"><div class="form-text">${t('workflow.signatureHint')}</div></div>
+                    <div class="alert alert-info py-2 small" id="role-disclaimer-text" lang="mr">${t('workflow.disclaimer.' + user.role) || t('workflow.disclaimer')}</div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="disclaimer-check" required><label class="form-check-label" for="disclaimer-check">${t('workflow.disclaimerAccept')}</label></div>
+                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-success" id="btn-confirm-approve" data-i18n="workflow.confirmApprove">Confirm Approve</button></div></form>
             </div></div>
         </div>
 
@@ -1093,12 +1095,26 @@ function wireWorkflowButtons(id, params) {
     document.getElementById('btn-approve')?.addEventListener('click', () => new bootstrap.Modal(document.getElementById('approveModal')).show());
     document.getElementById('approve-form')?.addEventListener('submit', async e => {
         e.preventDefault();
-        const r = await api.post(`/workflow/${id}/approve`, {
-            proposalId: id, opinion_En: document.getElementById('opinion').value.trim() || null,
-            opinion_Mr: document.getElementById('opinion-mr')?.value.trim() || null,
-            disclaimerAccepted: document.getElementById('disclaimer-check').checked });
-        bootstrap.Modal.getInstance(document.getElementById('approveModal'))?.hide();
-        if (r.success) { toast.success('Approved'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');
+        const confirmBtn = document.getElementById('btn-confirm-approve');
+        confirmBtn.disabled = true;
+        try {
+            let signaturePath = null;
+            const sigFile = document.getElementById('approve-sig-file')?.files[0];
+            if (sigFile) {
+                const fd = new FormData();
+                fd.append('file', sigFile);
+                const sigRes = await api.upload(`/workflow/${id}/approval-signature`, fd);
+                if (!sigRes.success) { toast.error(sigRes.error || 'Signature upload failed'); return; }
+                signaturePath = sigRes.data;
+            }
+            const r = await api.post(`/workflow/${id}/approve`, {
+                proposalId: id, opinion_En: document.getElementById('opinion').value.trim() || null,
+                opinion_Mr: document.getElementById('opinion-mr')?.value.trim() || null,
+                disclaimerAccepted: document.getElementById('disclaimer-check').checked,
+                signaturePath });
+            bootstrap.Modal.getInstance(document.getElementById('approveModal'))?.hide();
+            if (r.success) { toast.success('Approved'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');
+        } finally { confirmBtn.disabled = false; }
     });
 
     document.getElementById('btn-pushback')?.addEventListener('click', () => new bootstrap.Modal(document.getElementById('pushbackModal')).show());

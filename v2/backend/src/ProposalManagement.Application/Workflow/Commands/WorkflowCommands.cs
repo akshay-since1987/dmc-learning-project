@@ -78,6 +78,7 @@ public record ApproveProposalCommand : IRequest<Result>
     public string? Opinion_En { get; init; }
     public string? Opinion_Mr { get; init; }
     public bool DisclaimerAccepted { get; init; }
+    public string? SignaturePath { get; init; }
 }
 
 public class ApproveProposalHandler : IRequestHandler<ApproveProposalCommand, Result>
@@ -135,7 +136,8 @@ public class ApproveProposalHandler : IRequestHandler<ApproveProposalCommand, Re
             ActorDesignation_Mr = user?.Designation?.Name_Mr,
             Opinion_En = request.Opinion_En,
             Opinion_Mr = request.Opinion_Mr,
-            DisclaimerText = $"Approved at stage {currentStage}",
+            SignaturePath = request.SignaturePath,
+            DisclaimerText = GetRoleDisclaimerText(_user.Role!, currentStage),
             DisclaimerAccepted = true,
             CreatedAt = DateTime.UtcNow
         });
@@ -165,6 +167,32 @@ public class ApproveProposalHandler : IRequestHandler<ApproveProposalCommand, Re
             nameof(ProposalStage.AtStandingCommittee) => (nameof(ProposalStage.AtCollector), nameof(UserRole.Collector)),
             nameof(ProposalStage.AtCollector) => (nameof(ProposalStage.Approved), null),
             _ => (null, null)
+        };
+    }
+
+    private static string GetRoleDisclaimerText(string role, string stage)
+    {
+        return role switch
+        {
+            nameof(UserRole.CityEngineer) =>
+                "मी, शहर अभियंता या नात्याने, प्रमाणित करतो/करते की तांत्रिक तपशील आणि अंदाजपत्रक योग्य असून मान्यतेसाठी शिफारस करतो/करते. " +
+                "(I, as the City Engineer, certify that the technical details and estimates are correct and recommend approval.)",
+            nameof(UserRole.AccountOfficer) =>
+                "मी, लेखा अधिकारी या नात्याने, प्रमाणित करतो/करते की अर्थसंकल्पीय तरतूद उपलब्ध आहे आणि आर्थिक नोंदी अचूक आहेत. " +
+                "(I, as the Account Officer, certify that the budget provision is available and financial records are correct.)",
+            nameof(UserRole.DyCommissioner) =>
+                "मी, उप-आयुक्त या नात्याने, प्रमाणित करतो/करते की सर्व बाबींचा आढावा घेतला असून अंतिम मान्यतेसाठी शिफारस करतो/करते. " +
+                "(I, as the Deputy Commissioner, certify that I have reviewed all aspects and recommend final approval.)",
+            nameof(UserRole.Commissioner) =>
+                "मी, आयुक्त या नात्याने, या प्रस्तावास प्रशासकीय मान्यता प्रदान करतो/करते. " +
+                "(I, as the Commissioner, grant administrative approval for this proposal.)",
+            nameof(UserRole.StandingCommittee) =>
+                "स्थायी समिती या नात्याने, या प्रस्तावास मान्यता प्रदान करण्यात येत आहे. " +
+                "(As the Standing Committee, approval is hereby granted for this proposal.)",
+            nameof(UserRole.Collector) =>
+                "मी, जिल्हाधिकारी या नात्याने, या प्रस्तावास अंतिम मान्यता प्रदान करतो/करते. " +
+                "(I, as the District Collector, grant final approval for this proposal.)",
+            _ => $"Approved at stage {stage}"
         };
     }
 }
@@ -231,5 +259,43 @@ public class PushBackProposalHandler : IRequestHandler<PushBackProposalCommand, 
         await _db.SaveChangesAsync(ct);
         _logger.LogInformation("Proposal {ProposalNumber} pushed back by {UserId}", proposal.ProposalNumber, _user.UserId);
         return Result.Success();
+    }
+}
+
+// ── Upload Approval Signature ──
+public record UploadApprovalSignatureCommand : IRequest<Result<string>>
+{
+    public Guid ProposalId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadApprovalSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadApprovalSignatureHandler> logger)
+    : IRequestHandler<UploadApprovalSignatureCommand, Result<string>>
+{
+    private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
+    private const long MaxSize = 2 * 1024 * 1024; // 2 MB
+
+    public async Task<Result<string>> Handle(UploadApprovalSignatureCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result<string>.Failure("Signature file exceeds 2 MB limit");
+        if (!AllowedTypes.Contains(request.ContentType)) return Result<string>.Failure("Signature must be PNG, JPEG, or SVG");
+
+        var proposal = await db.Proposals.FindAsync(new object[] { request.ProposalId }, ct);
+        if (proposal is null) return Result<string>.NotFound("Proposal not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "approvals", request.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        var storageName = $"{Guid.NewGuid():N}_approval_signature.png";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        var relativePath = $"/uploads/approvals/{request.ProposalId}/{storageName}";
+        logger.LogInformation("Approval signature uploaded for Proposal {ProposalId}", request.ProposalId);
+        return Result<string>.Success(relativePath);
     }
 }

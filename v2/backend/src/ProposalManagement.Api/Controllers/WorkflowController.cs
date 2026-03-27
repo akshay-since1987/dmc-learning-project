@@ -24,4 +24,17 @@ public class WorkflowController : BaseController
         if (id != command.ProposalId) return BadRequest(new { success = false, error = "ID mismatch" });
         return ToActionResult(await Mediator.Send(command));
     }
+
+    [HttpPost("{id:guid}/approval-signature")]
+    public async Task<IActionResult> UploadApprovalSignature(Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        return ToActionResult(await Mediator.Send(new UploadApprovalSignatureCommand
+        {
+            ProposalId = id, FileName = file.FileName, FileSize = file.Length,
+            ContentType = file.ContentType, FileContent = ms.ToArray()
+        }));
+    }
 }
