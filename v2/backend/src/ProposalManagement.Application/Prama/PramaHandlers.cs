@@ -15,8 +15,10 @@ public record PramaDetailDto
     public Guid ProposalId { get; init; }
     public Guid? FundTypeId { get; init; }
     public string? FundTypeName { get; init; }
+    public string? FundTypeName_Mr { get; init; }
     public Guid? BudgetHeadId { get; init; }
     public string? BudgetHeadName { get; init; }
+    public string? BudgetHeadName_Mr { get; init; }
     public string? FundApprovalYear { get; init; }
     public string? DeptUserName_En { get; init; }
     public string? DeptUserName_Mr { get; init; }
@@ -43,8 +45,9 @@ public class GetPramaDetailHandler(IAppDbContext db) : IRequestHandler<GetPramaD
         return Result<PramaDetailDto?>.Success(new PramaDetailDto
         {
             Id = p.Id, ProposalId = p.ProposalId, FundTypeId = p.FundTypeId,
-            FundTypeName = p.FundType?.Name_En, BudgetHeadId = p.BudgetHeadId,
-            BudgetHeadName = p.BudgetHead?.Name_En, FundApprovalYear = p.FundApprovalYear,
+            FundTypeName = p.FundType?.Name_En, FundTypeName_Mr = p.FundType?.Name_Mr,
+            BudgetHeadId = p.BudgetHeadId,
+            BudgetHeadName = p.BudgetHead?.Name_En, BudgetHeadName_Mr = p.BudgetHead?.Name_Mr, FundApprovalYear = p.FundApprovalYear,
             DeptUserName_En = p.DeptUserName_En, DeptUserName_Mr = p.DeptUserName_Mr,
             References_En = p.References_En, References_Mr = p.References_Mr,
             AdditionalDetails_En = p.AdditionalDetails_En, AdditionalDetails_Mr = p.AdditionalDetails_Mr,

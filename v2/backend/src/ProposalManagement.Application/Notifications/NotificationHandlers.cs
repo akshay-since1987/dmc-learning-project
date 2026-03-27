@@ -79,18 +79,19 @@ public class MarkAllNotificationsReadHandler(IAppDbContext db, ICurrentUser user
 public interface INotificationService
 {
     Task NotifyAsync(Guid userId, Guid palikaId, string type, string title_En, string message_En,
-        Guid? proposalId = null, CancellationToken ct = default);
+        Guid? proposalId = null, string? title_Mr = null, string? message_Mr = null, CancellationToken ct = default);
 }
 
 public class NotificationService(IAppDbContext db) : INotificationService
 {
     public async Task NotifyAsync(Guid userId, Guid palikaId, string type, string title_En, string message_En,
-        Guid? proposalId = null, CancellationToken ct = default)
+        Guid? proposalId = null, string? title_Mr = null, string? message_Mr = null, CancellationToken ct = default)
     {
         db.Notifications.Add(new Notification
         {
             UserId = userId, PalikaId = palikaId, ProposalId = proposalId,
-            Type = type, Title_En = title_En, Message_En = message_En,
+            Type = type, Title_En = title_En, Title_Mr = title_Mr,
+            Message_En = message_En, Message_Mr = message_Mr,
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync(ct);

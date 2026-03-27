@@ -15,10 +15,13 @@ public record FieldVisitDto
     public int VisitNumber { get; init; }
     public Guid AssignedToId { get; init; }
     public string? AssignedToName { get; init; }
+    public string? AssignedToName_Mr { get; init; }
     public string? InspectionByName { get; init; }
+    public string? InspectionByName_Mr { get; init; }
     public DateTime? InspectionDate { get; init; }
     public Guid? SiteConditionId { get; init; }
     public string? SiteConditionName { get; init; }
+    public string? SiteConditionName_Mr { get; init; }
     public string? ProblemDescription_En { get; init; }
     public string? ProblemDescription_Mr { get; init; }
     public string? Measurements_En { get; init; }
@@ -63,10 +66,13 @@ public class GetFieldVisitsHandler(IAppDbContext db, ICurrentUser user) : IReque
                 VisitNumber = fv.VisitNumber,
                 AssignedToId = fv.AssignedToId,
                 AssignedToName = fv.AssignedTo.FullName_En,
+                AssignedToName_Mr = fv.AssignedTo.FullName_Mr,
                 InspectionByName = fv.InspectionBy != null ? fv.InspectionBy.FullName_En : null,
+                InspectionByName_Mr = fv.InspectionBy != null ? fv.InspectionBy.FullName_Mr : null,
                 InspectionDate = fv.InspectionDate,
                 SiteConditionId = fv.SiteConditionId,
                 SiteConditionName = fv.SiteCondition != null ? fv.SiteCondition.Name_En : null,
+                SiteConditionName_Mr = fv.SiteCondition != null ? fv.SiteCondition.Name_Mr : null,
                 ProblemDescription_En = fv.ProblemDescription_En,
                 ProblemDescription_Mr = fv.ProblemDescription_Mr,
                 Measurements_En = fv.Measurements_En,

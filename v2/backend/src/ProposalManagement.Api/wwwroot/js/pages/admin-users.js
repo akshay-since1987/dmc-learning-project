@@ -110,7 +110,7 @@ async function loadUsers() {
     }
     tbody.innerHTML = users.map(u => `
         <tr>
-            <td>${escapeHtml(u.fullName_En || u.fullName || '—')}</td>
+            <td>${escapeHtml(u.fullName_En || u.fullName || '—')}${u.fullName_Mr ? ` <span class="text-muted small" lang="mr">(${escapeHtml(u.fullName_Mr)})</span>` : ''}</td>
             <td>${escapeHtml(u.mobile || '—')}</td>
             <td><span class="badge bg-primary">${u.role}</span></td>
             <td>${escapeHtml(u.departmentName || '—')}</td>

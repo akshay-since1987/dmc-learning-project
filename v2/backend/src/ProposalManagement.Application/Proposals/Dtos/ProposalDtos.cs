@@ -8,10 +8,13 @@ public record ProposalListDto(
     string WorkTitle_En,
     string? WorkTitle_Mr,
     string DepartmentName,
+    string? DepartmentName_Mr,
     string? WorkCategoryName,
+    string? WorkCategoryName_Mr,
     string CurrentStage,
     string Priority,
     string CreatedByName,
+    string? CreatedByName_Mr,
     int CompletedTab,
     DateTime CreatedAt);
 
@@ -23,12 +26,16 @@ public record ProposalDetailDto
     public DateTime ProposalDate { get; init; }
     public Guid DepartmentId { get; init; }
     public string? DepartmentName { get; init; }
+    public string? DepartmentName_Mr { get; init; }
     public Guid DeptWorkCategoryId { get; init; }
     public string? WorkCategoryName { get; init; }
+    public string? WorkCategoryName_Mr { get; init; }
     public Guid ZoneId { get; init; }
     public string? ZoneName { get; init; }
+    public string? ZoneName_Mr { get; init; }
     public Guid PrabhagId { get; init; }
     public string? PrabhagName { get; init; }
+    public string? PrabhagName_Mr { get; init; }
     public string? Area { get; init; }
     public string? Area_Mr { get; init; }
     public string? LocationAddress_En { get; init; }
@@ -42,6 +49,7 @@ public record ProposalDetailDto
 
     public Guid? RequestSourceId { get; init; }
     public string? RequestSourceName { get; init; }
+    public string? RequestSourceName_Mr { get; init; }
     public string? RequestorName { get; init; }
     public string? RequestorName_Mr { get; init; }
     public string? RequestorMobile { get; init; }
@@ -56,10 +64,12 @@ public record ProposalDetailDto
     public string CurrentStage { get; init; } = default!;
     public Guid? CurrentOwnerId { get; init; }
     public string? CurrentOwnerName { get; init; }
+    public string? CurrentOwnerName_Mr { get; init; }
     public int PushBackCount { get; init; }
     public int CompletedTab { get; init; }
     public Guid CreatedById { get; init; }
     public string? CreatedByName { get; init; }
+    public string? CreatedByName_Mr { get; init; }
     public DateTime CreatedAt { get; init; }
 
     public List<ProposalDocumentDto> Documents { get; init; } = [];
@@ -92,6 +102,7 @@ public record ApprovalHistoryDto(
     string? ActorName_En,
     string? ActorName_Mr,
     string? ActorDesignation_En,
+    string? ActorDesignation_Mr,
     string? Opinion_En,
     string? Opinion_Mr,
     string? PushBackNote_En,

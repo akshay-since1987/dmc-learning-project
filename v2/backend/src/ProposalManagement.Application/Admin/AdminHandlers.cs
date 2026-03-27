@@ -10,10 +10,10 @@ namespace ProposalManagement.Application.Admin;
 
 // ── User DTOs ──
 public record AdminUserDto(Guid Id, string FullName_En, string? FullName_Mr, string MobileNumber,
-    string? Email, string Role, Guid? DepartmentId, string? DepartmentName,
-    Guid? DesignationId, string? DesignationName, bool IsActive, DateTime CreatedAt);
+    string? Email, string Role, Guid? DepartmentId, string? DepartmentName, string? DepartmentName_Mr,
+    Guid? DesignationId, string? DesignationName, string? DesignationName_Mr, bool IsActive, DateTime CreatedAt);
 
-public record AdminUserListDto(Guid Id, string FullName_En, string MobileNumber, string Role,
+public record AdminUserListDto(Guid Id, string FullName_En, string? FullName_Mr, string MobileNumber, string Role,
     string? DepartmentName, bool IsActive);
 
 // ── Query: List users ──
@@ -35,7 +35,7 @@ public class GetUsersHandler(IAppDbContext db, ICurrentUser user) : IRequestHand
         var total = await q.CountAsync(ct);
         var items = await q.OrderBy(u => u.FullName_En)
             .Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
-            .Select(u => new AdminUserListDto(u.Id, u.FullName_En, u.MobileNumber, u.Role,
+            .Select(u => new AdminUserListDto(u.Id, u.FullName_En, u.FullName_Mr, u.MobileNumber, u.Role,
                 u.Department != null ? u.Department.Name_En : null, u.IsActive))
             .ToListAsync(ct);
 
@@ -57,8 +57,8 @@ public class GetUserByIdHandler(IAppDbContext db, ICurrentUser user) : IRequestH
         if (u is null) return Result<AdminUserDto>.NotFound();
 
         return Result<AdminUserDto>.Success(new AdminUserDto(u.Id, u.FullName_En, u.FullName_Mr, u.MobileNumber,
-            u.Email, u.Role, u.DepartmentId, u.Department?.Name_En,
-            u.DesignationId, u.Designation?.Name_En, u.IsActive, u.CreatedAt));
+            u.Email, u.Role, u.DepartmentId, u.Department?.Name_En, u.Department?.Name_Mr,
+            u.DesignationId, u.Designation?.Name_En, u.Designation?.Name_Mr, u.IsActive, u.CreatedAt));
     }
 }
 

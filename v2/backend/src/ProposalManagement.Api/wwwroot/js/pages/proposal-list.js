@@ -114,8 +114,8 @@ export async function renderProposalListPage(params = {}) {
                     <td>${start + i + 1}</td>
                     <td><a href="#/proposals/${p.id}" class="text-decoration-none fw-medium">${escapeHtml(p.proposalNumber)}</a></td>
                     <td>${escapeHtml(p.workTitle_En)}</td>
-                    <td>${escapeHtml(p.departmentName || '—')}</td>
-                    <td>${escapeHtml(p.workCategoryName || '—')}</td>
+                    <td>${escapeHtml(p.departmentName || '—')}${p.departmentName_Mr ? ` <span class="text-muted small" lang="mr">(${escapeHtml(p.departmentName_Mr)})</span>` : ''}</td>
+                    <td>${escapeHtml(p.workCategoryName || '—')}${p.workCategoryName_Mr ? ` <span class="text-muted small" lang="mr">(${escapeHtml(p.workCategoryName_Mr)})</span>` : ''}</td>
                     <td>${stageBadge(p.currentStage)}</td>
                     <td><span class="badge bg-${p.priority === 'High' ? 'danger' : p.priority === 'Low' ? 'secondary' : 'warning text-dark'}">${p.priority}</span></td>
                     <td>${formatDate(p.createdAt)}</td>

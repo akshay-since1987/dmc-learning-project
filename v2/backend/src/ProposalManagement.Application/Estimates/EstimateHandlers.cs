@@ -17,10 +17,13 @@ public record EstimateDto
     public decimal? EstimatedCost { get; init; }
     public Guid PreparedById { get; init; }
     public string? PreparedByName { get; init; }
+    public string? PreparedByName_Mr { get; init; }
     public string? PreparedSignaturePath { get; init; }
     public string? SentToRole { get; init; }
     public string? SentToName { get; init; }
+    public string? SentToName_Mr { get; init; }
     public string? ApprovedByName { get; init; }
+    public string? ApprovedByName_Mr { get; init; }
     public string? ApproverSignaturePath { get; init; }
     public bool ApproverDisclaimerAccepted { get; init; }
     public string? ApproverOpinion_En { get; init; }
@@ -49,9 +52,10 @@ public class GetEstimateHandler(IAppDbContext db) : IRequestHandler<GetEstimateQ
         {
             Id = est.Id, ProposalId = est.ProposalId, EstimatePdfPath = est.EstimatePdfPath,
             EstimatedCost = est.EstimatedCost, PreparedById = est.PreparedById,
-            PreparedByName = est.PreparedBy.FullName_En, PreparedSignaturePath = est.PreparedSignaturePath,
-            SentToRole = est.SentToRole, SentToName = est.SentTo?.FullName_En,
-            ApprovedByName = est.ApprovedBy?.FullName_En, ApproverSignaturePath = est.ApproverSignaturePath,
+            PreparedByName = est.PreparedBy.FullName_En, PreparedByName_Mr = est.PreparedBy.FullName_Mr,
+            PreparedSignaturePath = est.PreparedSignaturePath,
+            SentToRole = est.SentToRole, SentToName = est.SentTo?.FullName_En, SentToName_Mr = est.SentTo?.FullName_Mr,
+            ApprovedByName = est.ApprovedBy?.FullName_En, ApprovedByName_Mr = est.ApprovedBy?.FullName_Mr, ApproverSignaturePath = est.ApproverSignaturePath,
             ApproverDisclaimerAccepted = est.ApproverDisclaimerAccepted,
             ApproverOpinion_En = est.ApproverOpinion_En, ApproverOpinion_Mr = est.ApproverOpinion_Mr,
             Status = est.Status,

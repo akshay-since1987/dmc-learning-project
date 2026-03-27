@@ -26,7 +26,9 @@ public record TechnicalSanctionDto
     public string? SanctionedByDesignation { get; init; }
     public string? SanctionedByDesignation_Mr { get; init; }
     public string? PreparedByName { get; init; }
+    public string? PreparedByName_Mr { get; init; }
     public string? SignedByName { get; init; }
+    public string? SignedByName_Mr { get; init; }
     public string? SignerSignaturePath { get; init; }
     public DateTime? SignedAt { get; init; }
     public string Status { get; init; } = default!;
@@ -54,7 +56,8 @@ public class GetTechnicalSanctionHandler(IAppDbContext db) : IRequestHandler<Get
             SanctionedByName = ts.SanctionedByName, SanctionedByName_Mr = ts.SanctionedByName_Mr,
             SanctionedByDept = ts.SanctionedByDept, SanctionedByDept_Mr = ts.SanctionedByDept_Mr,
             SanctionedByDesignation = ts.SanctionedByDesignation, SanctionedByDesignation_Mr = ts.SanctionedByDesignation_Mr,
-            PreparedByName = ts.PreparedBy?.FullName_En, SignedByName = ts.SignedBy?.FullName_En,
+            PreparedByName = ts.PreparedBy?.FullName_En, PreparedByName_Mr = ts.PreparedBy?.FullName_Mr,
+            SignedByName = ts.SignedBy?.FullName_En, SignedByName_Mr = ts.SignedBy?.FullName_Mr,
             SignerSignaturePath = ts.SignerSignaturePath, SignedAt = ts.SignedAt,
             Status = ts.Status, CreatedAt = ts.CreatedAt
         });

@@ -55,12 +55,16 @@ public class GetProposalByIdHandler : IRequestHandler<GetProposalByIdQuery, Resu
             ProposalDate = p.ProposalDate,
             DepartmentId = p.DepartmentId,
             DepartmentName = p.Department?.Name_En,
+            DepartmentName_Mr = p.Department?.Name_Mr,
             DeptWorkCategoryId = p.DeptWorkCategoryId,
             WorkCategoryName = p.DeptWorkCategory?.Name_En,
+            WorkCategoryName_Mr = p.DeptWorkCategory?.Name_Mr,
             ZoneId = p.ZoneId,
             ZoneName = p.Zone?.Name_En,
+            ZoneName_Mr = p.Zone?.Name_Mr,
             PrabhagId = p.PrabhagId,
             PrabhagName = p.Prabhag?.Name_En,
+            PrabhagName_Mr = p.Prabhag?.Name_Mr,
             Area = p.Area,
             Area_Mr = p.Area_Mr,
             LocationAddress_En = p.LocationAddress_En,
@@ -72,6 +76,7 @@ public class GetProposalByIdHandler : IRequestHandler<GetProposalByIdQuery, Resu
             WorkDescription_Mr = p.WorkDescription_Mr,
             RequestSourceId = p.RequestSourceId,
             RequestSourceName = p.RequestSource?.Name_En,
+            RequestSourceName_Mr = p.RequestSource?.Name_Mr,
             RequestorName = p.RequestorName,
             RequestorName_Mr = p.RequestorName_Mr,
             RequestorMobile = p.RequestorMobile,
@@ -85,10 +90,12 @@ public class GetProposalByIdHandler : IRequestHandler<GetProposalByIdQuery, Resu
             CurrentStage = p.CurrentStage,
             CurrentOwnerId = p.CurrentOwnerId,
             CurrentOwnerName = p.CurrentOwner?.FullName_En,
+            CurrentOwnerName_Mr = p.CurrentOwner?.FullName_Mr,
             PushBackCount = p.PushBackCount,
             CompletedTab = p.CompletedTab,
             CreatedById = p.CreatedById,
             CreatedByName = p.CreatedBy?.FullName_En,
+            CreatedByName_Mr = p.CreatedBy?.FullName_Mr,
             CreatedAt = p.CreatedAt,
             Documents = p.Documents.Select(d => new ProposalDocumentDto(
                 d.Id, d.TabNumber, d.DocumentType, d.DocName, d.FileName, d.FileSize, d.ContentType, d.CreatedAt
@@ -135,9 +142,11 @@ public class GetMyProposalsHandler : IRequestHandler<GetMyProposalsQuery, Result
             .Select(p => new ProposalListDto(
                 p.Id, p.ProposalNumber, p.ProposalDate,
                 p.WorkTitle_En, p.WorkTitle_Mr,
-                p.Department.Name_En, p.DeptWorkCategory.Name_En,
+                p.Department.Name_En, p.Department.Name_Mr,
+                p.DeptWorkCategory.Name_En, p.DeptWorkCategory.Name_Mr,
                 p.CurrentStage, p.Priority,
-                p.CreatedBy.FullName_En, p.CompletedTab, p.CreatedAt))
+                p.CreatedBy.FullName_En, p.CreatedBy.FullName_Mr,
+                p.CompletedTab, p.CreatedAt))
             .ToListAsync(ct);
 
         return Result<PagedResult<ProposalListDto>>.Success(
@@ -173,9 +182,11 @@ public class GetPendingApprovalsHandler : IRequestHandler<GetPendingApprovalsQue
             .Select(p => new ProposalListDto(
                 p.Id, p.ProposalNumber, p.ProposalDate,
                 p.WorkTitle_En, p.WorkTitle_Mr,
-                p.Department.Name_En, p.DeptWorkCategory.Name_En,
+                p.Department.Name_En, p.Department.Name_Mr,
+                p.DeptWorkCategory.Name_En, p.DeptWorkCategory.Name_Mr,
                 p.CurrentStage, p.Priority,
-                p.CreatedBy.FullName_En, p.CompletedTab, p.CreatedAt))
+                p.CreatedBy.FullName_En, p.CreatedBy.FullName_Mr,
+                p.CompletedTab, p.CreatedAt))
             .ToListAsync(ct);
 
         return Result<PagedResult<ProposalListDto>>.Success(
@@ -223,9 +234,11 @@ public class GetAllProposalsHandler : IRequestHandler<GetAllProposalsQuery, Resu
             .Select(p => new ProposalListDto(
                 p.Id, p.ProposalNumber, p.ProposalDate,
                 p.WorkTitle_En, p.WorkTitle_Mr,
-                p.Department.Name_En, p.DeptWorkCategory.Name_En,
+                p.Department.Name_En, p.Department.Name_Mr,
+                p.DeptWorkCategory.Name_En, p.DeptWorkCategory.Name_Mr,
                 p.CurrentStage, p.Priority,
-                p.CreatedBy.FullName_En, p.CompletedTab, p.CreatedAt))
+                p.CreatedBy.FullName_En, p.CreatedBy.FullName_Mr,
+                p.CompletedTab, p.CreatedAt))
             .ToListAsync(ct);
 
         return Result<PagedResult<ProposalListDto>>.Success(
@@ -311,7 +324,7 @@ public class GetApprovalHistoryHandler : IRequestHandler<GetApprovalHistoryQuery
             .Select(a => new ApprovalHistoryDto(
                 a.Id, a.StageRole, a.Action,
                 a.ActorName_En, a.ActorName_Mr,
-                a.ActorDesignation_En,
+                a.ActorDesignation_En, a.ActorDesignation_Mr,
                 a.Opinion_En, a.Opinion_Mr,
                 a.PushBackNote_En, a.PushBackNote_Mr,
                 a.DisclaimerAccepted, a.CreatedAt))

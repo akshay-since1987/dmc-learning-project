@@ -15,10 +15,12 @@ public record BudgetDetailDto
     public Guid ProposalId { get; init; }
     public Guid? WorkExecutionMethodId { get; init; }
     public string? WorkExecutionMethodName { get; init; }
+    public string? WorkExecutionMethodName_Mr { get; init; }
     public int? WorkDurationDays { get; init; }
     public bool TenderVerificationDone { get; init; }
     public Guid? BudgetHeadId { get; init; }
     public string? BudgetHeadName { get; init; }
+    public string? BudgetHeadName_Mr { get; init; }
     public decimal? AllocatedFund { get; init; }
     public decimal? CurrentAvailableFund { get; init; }
     public decimal? OldExpenditure { get; init; }
@@ -49,8 +51,10 @@ public class GetBudgetDetailHandler(IAppDbContext db) : IRequestHandler<GetBudge
         {
             Id = b.Id, ProposalId = b.ProposalId,
             WorkExecutionMethodId = b.WorkExecutionMethodId, WorkExecutionMethodName = b.WorkExecutionMethod?.Name_En,
+            WorkExecutionMethodName_Mr = b.WorkExecutionMethod?.Name_Mr,
             WorkDurationDays = b.WorkDurationDays, TenderVerificationDone = b.TenderVerificationDone,
             BudgetHeadId = b.BudgetHeadId, BudgetHeadName = b.BudgetHead?.Name_En,
+            BudgetHeadName_Mr = b.BudgetHead?.Name_Mr,
             AllocatedFund = b.AllocatedFund, CurrentAvailableFund = b.CurrentAvailableFund,
             OldExpenditure = b.OldExpenditure, EstimatedCost = b.EstimatedCost,
             BalanceAmount = b.BalanceAmount, AccountSerialNo = b.AccountSerialNo,

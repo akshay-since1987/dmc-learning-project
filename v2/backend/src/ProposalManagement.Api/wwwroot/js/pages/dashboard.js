@@ -91,7 +91,7 @@ export async function renderDashboardPage() {
                 <td>${i + 1}</td>
                 <td><a href="#/proposals/${p.id}" class="text-decoration-none fw-medium">${p.proposalNumber}</a></td>
                 <td>${p.workTitle_En || '—'}</td>
-                <td>${p.departmentName || '—'}</td>
+                <td>${p.departmentName || '—'}${p.departmentName_Mr ? ` <span class="text-muted small" lang="mr">(${p.departmentName_Mr})</span>` : ''}</td>
                 <td>${stageBadge(p.currentStage)}</td>
                 <td>${formatDate(p.proposalDate)}</td>
                 <td><a href="#/proposals/${p.id}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
