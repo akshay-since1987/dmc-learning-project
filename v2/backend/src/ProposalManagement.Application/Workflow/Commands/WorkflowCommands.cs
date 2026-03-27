@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProposalManagement.Application.Common.Interfaces;
 using ProposalManagement.Application.Common.Models;
+using ProposalManagement.Application.Notifications;
 using ProposalManagement.Domain.Entities;
 using ProposalManagement.Domain.Enums;
 
@@ -16,12 +17,14 @@ public class SubmitProposalHandler : IRequestHandler<SubmitProposalCommand, Resu
     private readonly IAppDbContext _db;
     private readonly ICurrentUser _user;
     private readonly ILogger<SubmitProposalHandler> _logger;
+    private readonly INotificationService _notifications;
 
-    public SubmitProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<SubmitProposalHandler> logger)
+    public SubmitProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<SubmitProposalHandler> logger, INotificationService notifications)
     {
         _db = db;
         _user = user;
         _logger = logger;
+        _notifications = notifications;
     }
 
     public async Task<Result> Handle(SubmitProposalCommand request, CancellationToken ct)
@@ -66,6 +69,18 @@ public class SubmitProposalHandler : IRequestHandler<SubmitProposalCommand, Resu
         });
 
         await _db.SaveChangesAsync(ct);
+
+        // Notify the next stage owner
+        if (nextOwner is not null)
+        {
+            await _notifications.NotifyAsync(nextOwner.Id, proposal.PalikaId, "Workflow",
+                $"New proposal submitted: {proposal.ProposalNumber}",
+                $"Proposal {proposal.ProposalNumber} has been submitted for your review.",
+                proposal.Id,
+                $"नवीन प्रस्ताव सादर: {proposal.ProposalNumber}",
+                $"प्रस्ताव {proposal.ProposalNumber} आपल्या पुनरावलोकनासाठी सादर केला आहे.", ct);
+        }
+
         _logger.LogInformation("Proposal {ProposalNumber} submitted by {UserId}", proposal.ProposalNumber, _user.UserId);
         return Result.Success();
     }
@@ -86,12 +101,14 @@ public class ApproveProposalHandler : IRequestHandler<ApproveProposalCommand, Re
     private readonly IAppDbContext _db;
     private readonly ICurrentUser _user;
     private readonly ILogger<ApproveProposalHandler> _logger;
+    private readonly INotificationService _notifications;
 
-    public ApproveProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<ApproveProposalHandler> logger)
+    public ApproveProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<ApproveProposalHandler> logger, INotificationService notifications)
     {
         _db = db;
         _user = user;
         _logger = logger;
+        _notifications = notifications;
     }
 
     public async Task<Result> Handle(ApproveProposalCommand request, CancellationToken ct)
@@ -146,6 +163,28 @@ public class ApproveProposalHandler : IRequestHandler<ApproveProposalCommand, Re
         proposal.CurrentOwnerId = nextOwner?.Id;
 
         await _db.SaveChangesAsync(ct);
+
+        // Notify next owner or creator on final approval
+        if (nextOwner is not null)
+        {
+            await _notifications.NotifyAsync(nextOwner.Id, proposal.PalikaId, "Workflow",
+                $"Proposal approved: {proposal.ProposalNumber}",
+                $"Proposal {proposal.ProposalNumber} has been approved at {currentStage} and forwarded to you.",
+                proposal.Id,
+                $"प्रस्ताव मंजूर: {proposal.ProposalNumber}",
+                $"प्रस्ताव {proposal.ProposalNumber} {currentStage} येथे मंजूर करून आपल्याकडे पाठवला आहे.", ct);
+        }
+        else
+        {
+            // Final approval — notify the creator
+            await _notifications.NotifyAsync(proposal.CreatedById, proposal.PalikaId, "Workflow",
+                $"Proposal finally approved: {proposal.ProposalNumber}",
+                $"Your proposal {proposal.ProposalNumber} has been fully approved!",
+                proposal.Id,
+                $"प्रस्ताव अंतिम मंजूर: {proposal.ProposalNumber}",
+                $"आपला प्रस्ताव {proposal.ProposalNumber} पूर्णपणे मंजूर झाला आहे!", ct);
+        }
+
         _logger.LogInformation("Proposal {ProposalNumber} approved at {Stage} by {UserId}", proposal.ProposalNumber, currentStage, _user.UserId);
         return Result.Success();
     }
@@ -210,12 +249,14 @@ public class PushBackProposalHandler : IRequestHandler<PushBackProposalCommand, 
     private readonly IAppDbContext _db;
     private readonly ICurrentUser _user;
     private readonly ILogger<PushBackProposalHandler> _logger;
+    private readonly INotificationService _notifications;
 
-    public PushBackProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<PushBackProposalHandler> logger)
+    public PushBackProposalHandler(IAppDbContext db, ICurrentUser user, ILogger<PushBackProposalHandler> logger, INotificationService notifications)
     {
         _db = db;
         _user = user;
         _logger = logger;
+        _notifications = notifications;
     }
 
     public async Task<Result> Handle(PushBackProposalCommand request, CancellationToken ct)
@@ -257,6 +298,17 @@ public class PushBackProposalHandler : IRequestHandler<PushBackProposalCommand, 
         proposal.PushBackCount++;
 
         await _db.SaveChangesAsync(ct);
+
+        // Notify the creator about push-back
+        await _notifications.NotifyAsync(proposal.CreatedById, proposal.PalikaId, "Workflow",
+            $"Proposal pushed back: {proposal.ProposalNumber}",
+            $"Your proposal {proposal.ProposalNumber} has been pushed back. Reason: {request.PushBackNote_En}",
+            proposal.Id,
+            $"प्रस्ताव परत: {proposal.ProposalNumber}",
+            request.PushBackNote_Mr is not null
+                ? $"आपला प्रस्ताव {proposal.ProposalNumber} परत केला आहे. कारण: {request.PushBackNote_Mr}"
+                : null, ct);
+
         _logger.LogInformation("Proposal {ProposalNumber} pushed back by {UserId}", proposal.ProposalNumber, _user.UserId);
         return Result.Success();
     }
@@ -272,7 +324,7 @@ public record UploadApprovalSignatureCommand : IRequest<Result<string>>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadApprovalSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadApprovalSignatureHandler> logger)
+public class UploadApprovalSignatureHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadApprovalSignatureHandler> logger)
     : IRequestHandler<UploadApprovalSignatureCommand, Result<string>>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
@@ -286,15 +338,8 @@ public class UploadApprovalSignatureHandler(IAppDbContext db, ICurrentUser user,
         var proposal = await db.Proposals.FindAsync(new object[] { request.ProposalId }, ct);
         if (proposal is null) return Result<string>.NotFound("Proposal not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "approvals", request.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
+        var relativePath = await fileStorage.SaveAsync($"approvals/{request.ProposalId}", "approval_signature.png", request.FileContent, ct);
 
-        var storageName = $"{Guid.NewGuid():N}_approval_signature.png";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        var relativePath = $"/uploads/approvals/{request.ProposalId}/{storageName}";
         logger.LogInformation("Approval signature uploaded for Proposal {ProposalId}", request.ProposalId);
         return Result<string>.Success(relativePath);
     }

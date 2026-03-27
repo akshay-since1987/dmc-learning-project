@@ -156,7 +156,7 @@ public record UploadTsPdfCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadTsPdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadTsPdfHandler> logger)
+public class UploadTsPdfHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadTsPdfHandler> logger)
     : IRequestHandler<UploadTsPdfCommand, Result>
 {
     private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
@@ -170,22 +170,11 @@ public class UploadTsPdfHandler(IAppDbContext db, ICurrentUser user, ILogger<Upl
         var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
         if (ts is null) return Result.NotFound("Technical sanction not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(ts.TsPdfPath))
-        {
-            var oldFile = Path.Combine("wwwroot", ts.TsPdfPath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(ts.TsPdfPath, ct);
 
         var safeFileName = Path.GetFileName(request.FileName);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        ts.TsPdfPath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        ts.TsPdfPath = await fileStorage.SaveAsync($"technical-sanctions/{ts.ProposalId}", safeFileName, request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("TS PDF {FileName} uploaded for TechnicalSanction {TsId}", safeFileName, request.TsId);
@@ -203,7 +192,7 @@ public record UploadOutsideApprovalLetterCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadOutsideApprovalLetterHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadOutsideApprovalLetterHandler> logger)
+public class UploadOutsideApprovalLetterHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadOutsideApprovalLetterHandler> logger)
     : IRequestHandler<UploadOutsideApprovalLetterCommand, Result>
 {
     private const long MaxSize = 10 * 1024 * 1024; // 10 MB
@@ -215,22 +204,11 @@ public class UploadOutsideApprovalLetterHandler(IAppDbContext db, ICurrentUser u
         var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
         if (ts is null) return Result.NotFound("Technical sanction not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(ts.OutsideApprovalLetterPath))
-        {
-            var oldFile = Path.Combine("wwwroot", ts.OutsideApprovalLetterPath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(ts.OutsideApprovalLetterPath, ct);
 
         var safeFileName = Path.GetFileName(request.FileName);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        ts.OutsideApprovalLetterPath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        ts.OutsideApprovalLetterPath = await fileStorage.SaveAsync($"technical-sanctions/{ts.ProposalId}", safeFileName, request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Outside approval letter {FileName} uploaded for TechnicalSanction {TsId}", safeFileName, request.TsId);
@@ -248,7 +226,7 @@ public record UploadSignerSignatureCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadSignerSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadSignerSignatureHandler> logger)
+public class UploadSignerSignatureHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadSignerSignatureHandler> logger)
     : IRequestHandler<UploadSignerSignatureCommand, Result>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
@@ -262,21 +240,10 @@ public class UploadSignerSignatureHandler(IAppDbContext db, ICurrentUser user, I
         var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
         if (ts is null) return Result.NotFound("Technical sanction not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(ts.SignerSignaturePath))
-        {
-            var oldFile = Path.Combine("wwwroot", ts.SignerSignaturePath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(ts.SignerSignaturePath, ct);
 
-        var storageName = $"{Guid.NewGuid():N}_signer_signature.png";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        ts.SignerSignaturePath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        ts.SignerSignaturePath = await fileStorage.SaveAsync($"technical-sanctions/{ts.ProposalId}", "signer_signature.png", request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Signer signature uploaded for TechnicalSanction {TsId}", request.TsId);

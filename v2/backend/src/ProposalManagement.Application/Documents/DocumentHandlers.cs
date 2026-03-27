@@ -49,7 +49,7 @@ public record UploadDocumentCommand : IRequest<Result<Guid>>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadDocumentHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadDocumentHandler> logger) 
+public class UploadDocumentHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadDocumentHandler> logger) 
     : IRequestHandler<UploadDocumentCommand, Result<Guid>>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -65,21 +65,15 @@ public class UploadDocumentHandler(IAppDbContext db, ICurrentUser user, ILogger<
         if (request.FileSize > MaxFileSize) return Result<Guid>.Failure("File size exceeds 10 MB limit");
         if (!AllowedTypes.Contains(request.ContentType)) return Result<Guid>.Failure($"File type '{request.ContentType}' is not allowed");
 
-        // Save to wwwroot/uploads/{proposalId}/{guid}_{filename}
         var safeFileName = Path.GetFileName(request.FileName);
-        var folder = Path.Combine("wwwroot", "uploads", request.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+        var relativePath = await fileStorage.SaveAsync(request.ProposalId.ToString(), safeFileName, request.FileContent, ct);
 
         var doc = new ProposalDocument
         {
             Id = Guid.NewGuid(), ProposalId = request.ProposalId, TabNumber = request.TabNumber,
             DocumentType = request.DocumentType, DocName = request.DocName,
             FileName = safeFileName, FileSize = request.FileSize, ContentType = request.ContentType,
-            StoragePath = $"/uploads/{request.ProposalId}/{storageName}",
+            StoragePath = relativePath,
             UploadedById = user.UserId!.Value,
             CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
         };

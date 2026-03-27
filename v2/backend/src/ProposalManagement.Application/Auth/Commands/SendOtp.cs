@@ -14,12 +14,14 @@ public class SendOtpHandler : IRequestHandler<SendOtpCommand, Result>
     private readonly IAppDbContext _db;
     private readonly IConfiguration _config;
     private readonly ILogger<SendOtpHandler> _logger;
+    private readonly IOtpSmsService _smsService;
 
-    public SendOtpHandler(IAppDbContext db, IConfiguration config, ILogger<SendOtpHandler> logger)
+    public SendOtpHandler(IAppDbContext db, IConfiguration config, ILogger<SendOtpHandler> logger, IOtpSmsService smsService)
     {
         _db = db;
         _config = config;
         _logger = logger;
+        _smsService = smsService;
     }
 
     public async Task<Result> Handle(SendOtpCommand request, CancellationToken cancellationToken)
@@ -51,6 +53,9 @@ public class SendOtpHandler : IRequestHandler<SendOtpCommand, Result>
 
         _db.OtpRequests.Add(otpRequest);
         await _db.SaveChangesAsync(cancellationToken);
+
+        // Send OTP via SMS (simulated in dev, real gateway in prod)
+        await _smsService.SendAsync(request.MobileNumber, otp, cancellationToken);
 
         _logger.LogInformation("OTP sent to UserId {UserId}", user.Id);
 

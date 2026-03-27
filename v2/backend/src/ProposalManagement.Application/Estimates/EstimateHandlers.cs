@@ -178,7 +178,7 @@ public record UploadEstimatePdfCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadEstimatePdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadEstimatePdfHandler> logger)
+public class UploadEstimatePdfHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadEstimatePdfHandler> logger)
     : IRequestHandler<UploadEstimatePdfCommand, Result>
 {
     private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
@@ -192,22 +192,11 @@ public class UploadEstimatePdfHandler(IAppDbContext db, ICurrentUser user, ILogg
         var est = await db.Estimates.Include(e => e.Proposal).FirstOrDefaultAsync(e => e.Id == request.EstimateId, ct);
         if (est is null) return Result.NotFound("Estimate not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(est.EstimatePdfPath))
-        {
-            var oldFile = Path.Combine("wwwroot", est.EstimatePdfPath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(est.EstimatePdfPath, ct);
 
         var safeFileName = Path.GetFileName(request.FileName);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        est.EstimatePdfPath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        est.EstimatePdfPath = await fileStorage.SaveAsync($"estimates/{est.ProposalId}", safeFileName, request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Estimate PDF {FileName} uploaded for Estimate {EstimateId}", safeFileName, request.EstimateId);
@@ -225,7 +214,7 @@ public record UploadPreparedSignatureCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadPreparedSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadPreparedSignatureHandler> logger)
+public class UploadPreparedSignatureHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadPreparedSignatureHandler> logger)
     : IRequestHandler<UploadPreparedSignatureCommand, Result>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
@@ -239,21 +228,10 @@ public class UploadPreparedSignatureHandler(IAppDbContext db, ICurrentUser user,
         var est = await db.Estimates.Include(e => e.Proposal).FirstOrDefaultAsync(e => e.Id == request.EstimateId, ct);
         if (est is null) return Result.NotFound("Estimate not found");
 
-        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(est.PreparedSignaturePath))
-        {
-            var oldFile = Path.Combine("wwwroot", est.PreparedSignaturePath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(est.PreparedSignaturePath, ct);
 
-        var storageName = $"{Guid.NewGuid():N}_prepared_signature.png";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        est.PreparedSignaturePath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        est.PreparedSignaturePath = await fileStorage.SaveAsync($"estimates/{est.ProposalId}", "prepared_signature.png", request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Prepared signature uploaded for Estimate {EstimateId}", request.EstimateId);
@@ -271,7 +249,7 @@ public record UploadApproverSignatureCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadApproverSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadApproverSignatureHandler> logger)
+public class UploadApproverSignatureHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadApproverSignatureHandler> logger)
     : IRequestHandler<UploadApproverSignatureCommand, Result>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
@@ -286,21 +264,10 @@ public class UploadApproverSignatureHandler(IAppDbContext db, ICurrentUser user,
         if (est is null) return Result.NotFound("Estimate not found");
         if (est.SentToId != user.UserId) return Result.Forbidden("Only the designated approver can upload signature");
 
-        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
         if (!string.IsNullOrEmpty(est.ApproverSignaturePath))
-        {
-            var oldFile = Path.Combine("wwwroot", est.ApproverSignaturePath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(est.ApproverSignaturePath, ct);
 
-        var storageName = $"{Guid.NewGuid():N}_approver_signature.png";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        est.ApproverSignaturePath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        est.ApproverSignaturePath = await fileStorage.SaveAsync($"estimates/{est.ProposalId}", "approver_signature.png", request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Approver signature uploaded for Estimate {EstimateId}", request.EstimateId);

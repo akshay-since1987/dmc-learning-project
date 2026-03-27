@@ -244,7 +244,7 @@ public record UploadFieldVisitPhotoCommand : IRequest<Result<Guid>>
     public string? Caption { get; init; }
 }
 
-public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitPhotoHandler> logger) 
+public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadFieldVisitPhotoHandler> logger) 
     : IRequestHandler<UploadFieldVisitPhotoCommand, Result<Guid>>
 {
     private static readonly HashSet<string> AllowedImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -264,12 +264,7 @@ public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, I
         if (fv.AssignedToId != user.UserId) return Result<Guid>.Forbidden("Only assigned engineer can upload photos");
 
         var safeFileName = Path.GetFileName(request.FileName);
-        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+        var relativePath = await fileStorage.SaveAsync($"field-visits/{fv.ProposalId}", safeFileName, request.FileContent, ct);
 
         var photo = new FieldVisitPhoto
         {
@@ -278,7 +273,7 @@ public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, I
             FileName = safeFileName,
             FileSize = request.FileSize,
             ContentType = request.ContentType,
-            StoragePath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}",
+            StoragePath = relativePath,
             Caption = request.Caption,
             CreatedAt = DateTime.UtcNow
         };
@@ -294,7 +289,7 @@ public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, I
 // ── Delete Photo ──
 public record DeleteFieldVisitPhotoCommand(Guid PhotoId) : IRequest<Result>;
 
-public class DeleteFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user)
+public class DeleteFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage)
     : IRequestHandler<DeleteFieldVisitPhotoCommand, Result>
 {
     public async Task<Result> Handle(DeleteFieldVisitPhotoCommand request, CancellationToken ct)
@@ -305,9 +300,7 @@ public class DeleteFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user)
         if (photo is null) return Result.NotFound();
         if (photo.FieldVisit.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can delete photos");
 
-        // Delete physical file
-        var filePath = Path.Combine("wwwroot", photo.StoragePath.TrimStart('/'));
-        if (File.Exists(filePath)) File.Delete(filePath);
+        await fileStorage.DeleteAsync(photo.StoragePath, ct);
 
         db.FieldVisitPhotos.Remove(photo);
         await db.SaveChangesAsync(ct);
@@ -325,7 +318,7 @@ public record UploadFieldVisitPdfCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadFieldVisitPdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitPdfHandler> logger)
+public class UploadFieldVisitPdfHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadFieldVisitPdfHandler> logger)
     : IRequestHandler<UploadFieldVisitPdfCommand, Result>
 {
     private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
@@ -341,23 +334,11 @@ public class UploadFieldVisitPdfHandler(IAppDbContext db, ICurrentUser user, ILo
         if (fv.Status == nameof(FieldVisitStatus.Completed)) return Result.Failure("Cannot upload to a completed field visit");
         if (fv.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can upload PDF");
 
-        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
-        // Delete previous PDF if exists
         if (!string.IsNullOrEmpty(fv.UploadedPdfPath))
-        {
-            var oldFile = Path.Combine("wwwroot", fv.UploadedPdfPath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(fv.UploadedPdfPath, ct);
 
         var safeFileName = Path.GetFileName(request.FileName);
-        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        fv.UploadedPdfPath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}";
+        fv.UploadedPdfPath = await fileStorage.SaveAsync($"field-visits/{fv.ProposalId}", safeFileName, request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("PDF {FileName} uploaded for FieldVisit {FieldVisitId}", safeFileName, request.FieldVisitId);
@@ -375,7 +356,7 @@ public record UploadFieldVisitSignatureCommand : IRequest<Result>
     public byte[] FileContent { get; init; } = default!;
 }
 
-public class UploadFieldVisitSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitSignatureHandler> logger)
+public class UploadFieldVisitSignatureHandler(IAppDbContext db, ICurrentUser user, IFileStorageService fileStorage, ILogger<UploadFieldVisitSignatureHandler> logger)
     : IRequestHandler<UploadFieldVisitSignatureCommand, Result>
 {
     private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -394,22 +375,10 @@ public class UploadFieldVisitSignatureHandler(IAppDbContext db, ICurrentUser use
         if (fv.Status == nameof(FieldVisitStatus.Completed)) return Result.Failure("Cannot sign a completed field visit");
         if (fv.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can sign");
 
-        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
-        Directory.CreateDirectory(folder);
-
-        // Delete previous signature if exists
         if (!string.IsNullOrEmpty(fv.SignaturePath))
-        {
-            var oldFile = Path.Combine("wwwroot", fv.SignaturePath.TrimStart('/'));
-            if (File.Exists(oldFile)) File.Delete(oldFile);
-        }
+            await fileStorage.DeleteAsync(fv.SignaturePath, ct);
 
-        var storageName = $"{Guid.NewGuid():N}_signature.png";
-        var storagePath = Path.Combine(folder, storageName);
-
-        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
-
-        fv.SignaturePath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}";
+        fv.SignaturePath = await fileStorage.SaveAsync($"field-visits/{fv.ProposalId}", "signature.png", request.FileContent, ct);
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Signature uploaded for FieldVisit {FieldVisitId}", request.FieldVisitId);

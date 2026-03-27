@@ -27,6 +27,7 @@ artifacts/
 ___backend/_buildcheck/
 ___backend/_buildcheck_submitfix/
 ___backend/_buildcheck_termssign/
+v2/backend/_buildcheck/
 
 # ── NuGet ──
 **/packages/

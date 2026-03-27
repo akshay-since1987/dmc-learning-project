@@ -34,6 +34,36 @@ public static class DependencyInjection
         services.AddScoped<IPdfSignatureStampService, PdfSignatureStampService>();
         services.AddHttpClient<ITranslationService, GoogleTranslationService>();
 
+        // File storage — Local (dev) or Azure Blob (prod) based on config
+        var storageProvider = configuration.GetValue<string>("FileStorage:Provider") ?? "Local";
+        if (string.Equals(storageProvider, "AzureBlob", StringComparison.OrdinalIgnoreCase))
+        {
+            var connStr = configuration["AzureBlob:ConnectionString"]!;
+            var container = configuration.GetValue<string>("AzureBlob:ContainerName") ?? "uploads";
+            services.AddSingleton<IFileStorageService>(_ => new AzureBlobStorageService(connStr, container));
+        }
+        else
+        {
+            services.AddSingleton<IFileStorageService>(_ => new LocalFileStorageService());
+        }
+
+        // SMS service — Simulated (dev) or HTTP gateway (prod)
+        var simulateSms = configuration.GetValue<bool>("Otp:SimulateOtp");
+        if (simulateSms)
+        {
+            services.AddSingleton<IOtpSmsService, SimulatedOtpSmsService>();
+        }
+        else
+        {
+            services.AddHttpClient<IOtpSmsService, HttpSmsGatewayService>();
+        }
+
+        // DSC — Simulated for now
+        services.AddSingleton<IDscService, SimulatedDscService>();
+
+        // PDF generation
+        services.AddScoped<IPdfGenerationService, QuestPdfGenerationService>();
+
         return services;
     }
 }
