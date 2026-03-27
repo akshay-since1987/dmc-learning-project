@@ -2,34 +2,36 @@
 import { api } from '../api.js';
 import { getUser } from '../auth.js';
 import { stageBadge, formatDate, debounce, escapeHtml } from '../utils.js';
+import { t, tBilingual, translatePage, onLangChange } from '../i18n.js';
 
 export async function renderProposalListPage(params = {}) {
     const user = getUser();
     const mode = params.mode || 'my'; // my | all | pending
     const content = document.getElementById('page-content');
 
-    const titles = { my: 'My Proposals', all: 'All Proposals', pending: 'Pending Approvals' };
-    const title = titles[mode] || 'Proposals';
+    const titleKeys = { my: 'proposal.list.myProposals', all: 'proposal.list.allProposals', pending: 'proposal.list.pendingApprovals' };
+    const titleKey = titleKeys[mode] || 'proposal.list.title';
+    const title = t(titleKey);
     const canCreate = (user.role === 'JE' || user.role === 'Lotus') && mode === 'my';
 
     content.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="mb-0">${title}</h4>
-            ${canCreate ? '<a href="#/proposals/new" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i>New Proposal</a>' : ''}
+            ${canCreate ? `<a href="#/proposals/new" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle me-1"></i><span data-i18n="proposal.list.newProposal">${t('proposal.list.newProposal')}</span></a>` : ''}
         </div>
 
         <div class="card mb-3">
             <div class="card-body py-2">
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
-                        <label for="search-input" class="form-label visually-hidden">Search</label>
+                        <label for="search-input" class="form-label visually-hidden">${t('common.search')}</label>
                         <input type="text" class="form-control form-control-sm" id="search-input"
-                            placeholder="Search by title or number...">
+                            data-i18n-placeholder="proposal.list.search" placeholder="${t('proposal.list.search')}">
                     </div>
                     <div class="col-md-3">
-                        <label for="stage-filter" class="form-label visually-hidden">Stage</label>
+                        <label for="stage-filter" class="form-label visually-hidden">${t('proposal.list.stage')}</label>
                         <select class="form-select form-select-sm" id="stage-filter" aria-label="Filter by stage">
-                            <option value="">All Stages</option>
+                            <option value="" data-i18n="proposal.list.allStages">${t('proposal.list.allStages')}</option>
                             <option value="Draft">Draft</option>
                             <option value="AtCityEngineer">At City Engineer</option>
                             <option value="AtAccountOfficer">At Account Officer</option>
@@ -44,7 +46,7 @@ export async function renderProposalListPage(params = {}) {
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-sm btn-outline-secondary w-100" id="btn-reset-filters">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                            <i class="bi bi-arrow-counterclockwise me-1"></i><span data-i18n="proposal.list.reset">${t('proposal.list.reset')}</span>
                         </button>
                     </div>
                 </div>
@@ -58,18 +60,18 @@ export async function renderProposalListPage(params = {}) {
                         <thead>
                             <tr>
                                 <th scope="col">#</th>
-                                <th scope="col">Proposal No.</th>
-                                <th scope="col">Work Title</th>
-                                <th scope="col">Department</th>
-                                <th scope="col">Category</th>
-                                <th scope="col">Stage</th>
-                                <th scope="col">Priority</th>
-                                <th scope="col">Created</th>
-                                <th scope="col">Action</th>
+                                <th scope="col" data-i18n="proposal.list.number">${t('proposal.list.number')}</th>
+                                <th scope="col" data-i18n="proposal.list.subject">${t('proposal.list.subject')}</th>
+                                <th scope="col" data-i18n="proposal.list.department">${t('proposal.list.department')}</th>
+                                <th scope="col" data-i18n="proposal.list.category">${t('proposal.list.category')}</th>
+                                <th scope="col" data-i18n="proposal.list.stage">${t('proposal.list.stage')}</th>
+                                <th scope="col" data-i18n="proposal.list.priority">${t('proposal.list.priority')}</th>
+                                <th scope="col" data-i18n="proposal.list.date">${t('proposal.list.date')}</th>
+                                <th scope="col" data-i18n="proposal.list.action">${t('proposal.list.action')}</th>
                             </tr>
                         </thead>
                         <tbody id="list-tbody">
-                            <tr><td colspan="9" class="text-center py-4 text-muted">Loading...</td></tr>
+                            <tr><td colspan="9" class="text-center py-4 text-muted" data-i18n="common.loading">${t('common.loading')}</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -81,6 +83,9 @@ export async function renderProposalListPage(params = {}) {
                 </nav>
             </div>
         </div>`;
+
+    translatePage(content);
+    onLangChange(() => translatePage(content));
 
     let currentPage = 1;
     const pageSize = 20;
@@ -120,12 +125,12 @@ export async function renderProposalListPage(params = {}) {
             // Pagination info
             const total = res.data.totalCount;
             const totalPages = Math.ceil(total / pageSize);
-            document.getElementById('page-info').textContent = `Showing ${start + 1}–${Math.min(start + pageSize, total)} of ${total}`;
+            document.getElementById('page-info').textContent = `${t('proposal.list.showing')} ${start + 1}–${Math.min(start + pageSize, total)} ${t('proposal.list.of')} ${total}`;
 
             renderPagination(totalPages);
         } else {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No proposals found</td></tr>';
-            document.getElementById('page-info').textContent = '0 results';
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">${t('proposal.list.noResults')}</td></tr>`;
+            document.getElementById('page-info').textContent = `0 ${t('proposal.list.noResults').toLowerCase()}`;
             document.getElementById('pagination').innerHTML = '';
         }
     }

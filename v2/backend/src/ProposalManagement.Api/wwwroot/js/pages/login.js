@@ -2,6 +2,7 @@
 import { sendOtp, login } from '../auth.js';
 import { renderLayout } from '../layout.js';
 import { toast } from '../toast.js';
+import { t, tBilingual, translatePage, onLangChange } from '../i18n.js';
 
 export async function renderLoginPage() {
     // Hide layout for login
@@ -16,30 +17,30 @@ export async function renderLoginPage() {
                     <i class="bi bi-building text-primary" style="font-size:3rem;"></i>
                 </div>
                 <h5 class="mb-1" lang="mr">धुळे महानगरपालिका</h5>
-                <p class="text-muted mb-4" style="font-size:0.85rem;">Dhule Municipal Corporation<br>Proposal Management System</p>
+                <p class="text-muted mb-4" style="font-size:0.85rem;" data-i18n="login.corpTitle">${t('login.corpTitle')}</p>
 
                 <form id="login-form" novalidate>
                     <div class="mb-3 text-start">
                         <label for="mobile" class="form-label">
-                            <i class="bi bi-phone me-1"></i>Mobile Number
+                            <i class="bi bi-phone me-1"></i><span data-i18n="login.mobile">${t('login.mobile')}</span>
                         </label>
                         <div class="input-group">
                             <span class="input-group-text">+91</span>
-                            <input type="tel" class="form-control" id="mobile" placeholder="10-digit mobile"
+                            <input type="tel" class="form-control" id="mobile" data-i18n-placeholder="login.mobilePlaceholder" placeholder="${t('login.mobilePlaceholder')}"
                                 maxlength="10" pattern="[0-9]{10}" autocomplete="tel" required
                                 aria-describedby="mobile-help">
                         </div>
-                        <div id="mobile-help" class="form-text">Enter your registered mobile number</div>
+                        <div id="mobile-help" class="form-text" data-i18n="login.mobileHelp">${t('login.mobileHelp')}</div>
                     </div>
 
                     <button type="button" class="btn btn-primary w-100 mb-3" id="btn-send-otp">
-                        <i class="bi bi-send me-1"></i>Send OTP
+                        <i class="bi bi-send me-1"></i><span data-i18n="login.sendOtp">${t('login.sendOtp')}</span>
                     </button>
 
                     <div id="otp-section" class="d-none">
                         <div class="mb-3 text-start">
                             <label for="otp" class="form-label">
-                                <i class="bi bi-shield-lock me-1"></i>OTP Code
+                                <i class="bi bi-shield-lock me-1"></i><span data-i18n="login.otp">${t('login.otp')}</span>
                             </label>
                             <input type="text" class="form-control text-center fs-4 letter-spacing-2" id="otp"
                                 placeholder="_ _ _ _ _ _" maxlength="6" pattern="[0-9]{6}"
@@ -47,7 +48,7 @@ export async function renderLoginPage() {
                         </div>
 
                         <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Verify & Login
+                            <i class="bi bi-box-arrow-in-right me-1"></i><span data-i18n="login.verify">${t('login.verify')}</span>
                         </button>
                     </div>
 
@@ -55,9 +56,13 @@ export async function renderLoginPage() {
                 </form>
 
                 <hr class="my-4">
-                <small class="text-muted">© 2026 Dhule Municipal Corporation</small>
+                <small class="text-muted" data-i18n="login.copyright">${t('login.copyright')}</small>
             </div>
         </div>`;
+
+    const loginContainer = document.querySelector('.login-container');
+    translatePage(loginContainer);
+    onLangChange(() => translatePage(loginContainer));
 
     const mobileInput = document.getElementById('mobile');
     const otpInput = document.getElementById('otp');
@@ -77,17 +82,17 @@ export async function renderLoginPage() {
         hideError();
         const mobile = mobileInput.value.trim();
         if (!/^[0-9]{10}$/.test(mobile)) {
-            showError('Please enter a valid 10-digit mobile number');
+            showError(t('login.invalidMobile'));
             mobileInput.focus();
             return;
         }
 
         btnSend.disabled = true;
-        btnSend.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending...';
+        btnSend.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${t('login.sending')}`;
 
         const res = await sendOtp(mobile);
         btnSend.disabled = false;
-        btnSend.innerHTML = '<i class="bi bi-send me-1"></i>Send OTP';
+        btnSend.innerHTML = `<i class="bi bi-send me-1"></i>${t('login.sendOtp')}`;
 
         if (res.success) {
             otpSection.classList.remove('d-none');
@@ -106,18 +111,18 @@ export async function renderLoginPage() {
         const otp = otpInput.value.trim();
 
         if (!/^[0-9]{6}$/.test(otp)) {
-            showError('Please enter a valid 6-digit OTP');
+            showError(t('login.invalidOtp', null) || 'Please enter a valid 6-digit OTP');
             otpInput.focus();
             return;
         }
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifying...';
+        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${t('login.verifying', null) || 'Verifying...'}`;
 
         const res = await login(mobile, otp);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Verify & Login';
+        submitBtn.innerHTML = `<i class="bi bi-box-arrow-in-right me-1"></i>${t('login.verify')}`;
 
         if (res.success) {
             toast.success('Login successful!');

@@ -2,6 +2,7 @@
 import { getUser, logout, hasRole } from './auth.js';
 import { api } from './api.js';
 import { escapeHtml } from './utils.js';
+import { t, getLang, createLangSelector, translatePage, onLangChange } from './i18n.js';
 
 export function renderLayout() {
     const user = getUser();
@@ -18,7 +19,8 @@ export function clearLayout() {
 }
 
 function renderHeader(user) {
-    document.getElementById('app-header').innerHTML = `
+    const header = document.getElementById('app-header');
+    header.innerHTML = `
         <div class="app-header">
             <button class="btn btn-link text-dark d-md-none me-2 sidebar-toggle" aria-label="Toggle sidebar">
                 <i class="bi bi-list fs-4"></i>
@@ -28,6 +30,7 @@ function renderHeader(user) {
                 <small>Dhule Municipal Corporation — Proposal Management</small>
             </div>
             <div class="d-flex align-items-center gap-3">
+                <div id="lang-selector-slot"></div>
                 <div class="dropdown" id="notif-dropdown">
                     <button class="btn btn-link text-dark position-relative p-0" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
                         <i class="bi bi-bell fs-5"></i>
@@ -44,10 +47,14 @@ function renderHeader(user) {
                 </span>
                 <button class="btn btn-outline-danger btn-sm" id="btn-logout" aria-label="Logout">
                     <i class="bi bi-box-arrow-right"></i>
-                    <span class="d-none d-sm-inline ms-1">Logout</span>
+                    <span class="d-none d-sm-inline ms-1" data-i18n="nav.logout">Logout</span>
                 </button>
             </div>
         </div>`;
+
+    // Insert language selector
+    const slot = header.querySelector('#lang-selector-slot');
+    if (slot) slot.appendChild(createLangSelector());
 
     document.getElementById('btn-logout').addEventListener('click', () => {
         logout();
@@ -76,17 +83,17 @@ function renderSidebar(user) {
     let links = `
         <div class="pt-2">
             <a href="#/dashboard" class="nav-link" data-route="/dashboard">
-                <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+                <i class="bi bi-speedometer2"></i><span data-i18n="nav.dashboard">Dashboard</span>
             </a>`;
 
     // JE-specific
     if (role === 'JE' || role === 'Lotus') {
         links += `
             <a href="#/proposals/new" class="nav-link" data-route="/proposals/new">
-                <i class="bi bi-plus-circle"></i><span>Create Proposal</span>
+                <i class="bi bi-plus-circle"></i><span data-i18n="nav.createProposal">Create Proposal</span>
             </a>
             <a href="#/proposals/my" class="nav-link" data-route="/proposals/my">
-                <i class="bi bi-file-earmark-text"></i><span>My Proposals</span>
+                <i class="bi bi-file-earmark-text"></i><span data-i18n="nav.myProposals">My Proposals</span>
             </a>`;
     }
 
@@ -94,13 +101,13 @@ function renderSidebar(user) {
     if (['JE','TS','AE','SE','CityEngineer'].includes(role) || role === 'Lotus') {
         links += `
             <a href="#/proposals/pending" class="nav-link" data-route="/proposals/pending">
-                <i class="bi bi-clock-history"></i><span>Assigned Tasks</span>
+                <i class="bi bi-clock-history"></i><span data-i18n="nav.assignedTasks">Assigned Tasks</span>
             </a>`;
     }
     if (['CityEngineer','AccountOfficer','DyCommissioner','Commissioner','StandingCommittee','Collector'].includes(role) || role === 'Lotus') {
         links += `
             <a href="#/approvals" class="nav-link" data-route="/approvals">
-                <i class="bi bi-check2-square"></i><span>Pending Approvals</span>
+                <i class="bi bi-check2-square"></i><span data-i18n="nav.pendingApprovals">Pending Approvals</span>
             </a>`;
     }
 
@@ -108,10 +115,10 @@ function renderSidebar(user) {
     if (['Commissioner','Auditor','Lotus'].includes(role)) {
         links += `
             <a href="#/proposals/all" class="nav-link" data-route="/proposals/all">
-                <i class="bi bi-collection"></i><span>All Proposals</span>
+                <i class="bi bi-collection"></i><span data-i18n="nav.allProposals">All Proposals</span>
             </a>
             <a href="#/audit" class="nav-link" data-route="/audit">
-                <i class="bi bi-journal-text"></i><span>Audit Trail</span>
+                <i class="bi bi-journal-text"></i><span data-i18n="nav.auditTrail">Audit Trail</span>
             </a>`;
     }
 
@@ -120,12 +127,12 @@ function renderSidebar(user) {
     // Lotus admin section
     if (role === 'Lotus') {
         links += `
-            <div class="sidebar-section-label">Administration</div>
+            <div class="sidebar-section-label" data-i18n="nav.admin">Administration</div>
             <a href="#/admin/users" class="nav-link" data-route="/admin/users">
-                <i class="bi bi-people"></i><span>Users</span>
+                <i class="bi bi-people"></i><span data-i18n="nav.users">Users</span>
             </a>
             <a href="#/admin/masters" class="nav-link" data-route="/admin/masters">
-                <i class="bi bi-database"></i><span>Masters</span>
+                <i class="bi bi-database"></i><span data-i18n="nav.masters">Masters</span>
             </a>`;
     }
 
@@ -134,6 +141,12 @@ function renderSidebar(user) {
     // Highlight active link
     highlightActiveLink();
     window.addEventListener('hashchange', highlightActiveLink);
+
+    // Translate sidebar labels
+    translatePage(nav);
+
+    // Re-translate sidebar on language change
+    onLangChange(() => translatePage(nav));
 }
 
 function highlightActiveLink() {

@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { getUser, hasRole } from '../auth.js';
 import { toast } from '../toast.js';
 import { escapeHtml, formatDate } from '../utils.js';
+import { t, tBilingual, translatePage, onLangChange } from '../i18n.js';
 
 let currentPage = 1;
 const pageSize = 25;
@@ -11,14 +12,14 @@ export async function renderAuditTrailPage() {
     const content = document.getElementById('page-content');
 
     content.innerHTML = `
-        <h4 class="mb-3"><i class="bi bi-journal-text me-2"></i>Audit Trail</h4>
+        <h4 class="mb-3"><i class="bi bi-journal-text me-2"></i><span data-i18n="audit.title">${t('audit.title')}</span></h4>
         <div class="card mb-3">
             <div class="card-body">
                 <form id="audit-filters" class="row g-2 align-items-end">
                     <div class="col-md-2">
-                        <label for="afModule" class="form-label small">Module</label>
+                        <label for="afModule" class="form-label small" data-i18n="audit.module">${t('audit.module')}</label>
                         <select class="form-select form-select-sm" id="afModule">
-                            <option value="">All</option>
+                            <option value="" data-i18n="audit.allModules">${t('audit.allModules')}</option>
                             <option value="Auth">Auth</option>
                             <option value="Proposal">Proposal</option>
                             <option value="Workflow">Workflow</option>
@@ -29,9 +30,9 @@ export async function renderAuditTrailPage() {
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="afAction" class="form-label small">Action</label>
+                        <label for="afAction" class="form-label small" data-i18n="audit.action">${t('audit.action')}</label>
                         <select class="form-select form-select-sm" id="afAction">
-                            <option value="">All</option>
+                            <option value="" data-i18n="audit.allActions">${t('audit.allActions')}</option>
                             <option value="Create">Create</option>
                             <option value="Update">Update</option>
                             <option value="Delete">Delete</option>
@@ -42,20 +43,20 @@ export async function renderAuditTrailPage() {
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="afFrom" class="form-label small">From</label>
+                        <label for="afFrom" class="form-label small" data-i18n="audit.from">${t('audit.from')}</label>
                         <input type="date" class="form-control form-control-sm" id="afFrom">
                     </div>
                     <div class="col-md-2">
-                        <label for="afTo" class="form-label small">To</label>
+                        <label for="afTo" class="form-label small" data-i18n="audit.to">${t('audit.to')}</label>
                         <input type="date" class="form-control form-control-sm" id="afTo">
                     </div>
                     <div class="col-md-2">
-                        <label for="afSearch" class="form-label small">Search</label>
-                        <input type="text" class="form-control form-control-sm" id="afSearch" placeholder="Entity, user...">
+                        <label for="afSearch" class="form-label small" data-i18n="audit.search">${t('audit.search')}</label>
+                        <input type="text" class="form-control form-control-sm" id="afSearch" data-i18n-placeholder="audit.search" placeholder="${t('audit.search')}">
                     </div>
                     <div class="col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-search me-1"></i>Filter</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-reset-filters">Reset</button>
+                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-search me-1"></i><span data-i18n="audit.filter">${t('audit.filter')}</span></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-reset-filters" data-i18n="audit.reset">${t('audit.reset')}</button>
                     </div>
                 </form>
             </div>
@@ -66,13 +67,13 @@ export async function renderAuditTrailPage() {
                     <table class="table table-hover table-sm mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:140px;">Timestamp</th>
-                                <th>User</th>
-                                <th>Action</th>
-                                <th>Module</th>
-                                <th>Entity</th>
-                                <th>Description</th>
-                                <th>Details</th>
+                                <th style="width:140px;" data-i18n="audit.timestamp">${t('audit.timestamp')}</th>
+                                <th data-i18n="audit.user">${t('audit.user')}</th>
+                                <th data-i18n="audit.action">${t('audit.action')}</th>
+                                <th data-i18n="audit.module">${t('audit.module')}</th>
+                                <th data-i18n="audit.entity">${t('audit.entity')}</th>
+                                <th data-i18n="audit.description">${t('audit.description')}</th>
+                                <th data-i18n="audit.details">${t('audit.details')}</th>
                             </tr>
                         </thead>
                         <tbody id="audit-tbody">
@@ -82,7 +83,7 @@ export async function renderAuditTrailPage() {
                 </div>
             </div>
             <div class="card-footer d-flex justify-content-between align-items-center">
-                <small class="text-muted" id="audit-info">Loading...</small>
+                <small class="text-muted" id="audit-info" data-i18n="common.loading">${t('common.loading')}</small>
                 <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-secondary" id="btn-prev" disabled><i class="bi bi-chevron-left"></i></button>
                     <button class="btn btn-outline-secondary" id="btn-next" disabled><i class="bi bi-chevron-right"></i></button>
@@ -94,11 +95,14 @@ export async function renderAuditTrailPage() {
         <div class="modal fade" id="auditDetailModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Audit Detail</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                    <div class="modal-header"><h5 class="modal-title" data-i18n="audit.detailTitle">${t('audit.detailTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                     <div class="modal-body" id="audit-detail-body"></div>
                 </div>
             </div>
         </div>`;
+
+    translatePage(content);
+    onLangChange(() => translatePage(content));
 
     document.getElementById('audit-filters').addEventListener('submit', e => { e.preventDefault(); currentPage = 1; loadAudit(); });
     document.getElementById('btn-reset-filters').addEventListener('click', () => {

@@ -4,6 +4,7 @@ import { getUser } from '../auth.js';
 import { toast } from '../toast.js';
 import { escapeHtml } from '../utils.js';
 import { createDualLangInput } from '../dual-lang-input.js';
+import { t, tBilingual, onLangChange } from '../i18n.js';
 
 export async function renderProposalFormPage(params = {}) {
     const content = document.getElementById('page-content');
@@ -36,28 +37,28 @@ export async function renderProposalFormPage(params = {}) {
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <a href="#/dashboard" class="text-decoration-none text-muted" style="font-size:0.85rem;">
-                    <i class="bi bi-arrow-left me-1"></i>Back
+                    <i class="bi bi-arrow-left me-1"></i><span data-i18n="proposal.form.back">Back</span>
                 </a>
-                <h4 class="mb-0 mt-1">${isEdit ? 'Edit Proposal' : 'Create New Proposal'}</h4>
+                <h4 class="mb-0 mt-1">${isEdit ? tBilingual('proposal.form.editTitle') : tBilingual('proposal.form.title')}</h4>
             </div>
         </div>
 
         <form id="proposal-form" novalidate>
             <div class="card mb-3">
-                <div class="card-header"><h6 class="mb-0"><i class="bi bi-building me-2"></i>Department & Category</h6></div>
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-building me-2"></i>${tBilingual('proposal.form.deptCategory')}</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="departmentId" class="form-label">Department <span class="text-danger">*</span></label>
+                            <label for="departmentId" class="form-label">${tBilingual('proposal.form.department')} <span class="text-danger">*</span></label>
                             <select class="form-select" id="departmentId" required>
-                                <option value="">Select Department</option>
+                                <option value="">${t('common.selectOption')}</option>
                                 ${departments.map(d => `<option value="${d.id}" ${existing?.departmentId === d.id ? 'selected' : ''}>${escapeHtml(d.name_En)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="deptWorkCategoryId" class="form-label">Work Category <span class="text-danger">*</span></label>
+                            <label for="deptWorkCategoryId" class="form-label">${tBilingual('proposal.form.workCategory')} <span class="text-danger">*</span></label>
                             <select class="form-select" id="deptWorkCategoryId" required>
-                                <option value="">Select Category</option>
+                                <option value="">${t('common.selectOption')}</option>
                             </select>
                         </div>
                     </div>
@@ -65,20 +66,20 @@ export async function renderProposalFormPage(params = {}) {
             </div>
 
             <div class="card mb-3">
-                <div class="card-header"><h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Work Location</h6></div>
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i>${tBilingual('proposal.form.workLocation')}</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="zoneId" class="form-label">Zone <span class="text-danger">*</span></label>
+                            <label for="zoneId" class="form-label">${tBilingual('proposal.form.zone')} <span class="text-danger">*</span></label>
                             <select class="form-select" id="zoneId" required>
-                                <option value="">Select Zone</option>
+                                <option value="">${t('common.selectOption')}</option>
                                 ${zones.map(z => `<option value="${z.id}" ${existing?.zoneId === z.id ? 'selected' : ''}>${escapeHtml(z.name_En)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="prabhagId" class="form-label">Prabhag <span class="text-danger">*</span></label>
+                            <label for="prabhagId" class="form-label">${tBilingual('proposal.form.prabhag')} <span class="text-danger">*</span></label>
                             <select class="form-select" id="prabhagId" required>
-                                <option value="">Select Prabhag</option>
+                                <option value="">${t('common.selectOption')}</option>
                             </select>
                         </div>
                         <div class="col-md-4" id="dual-area-container"></div>
@@ -88,7 +89,7 @@ export async function renderProposalFormPage(params = {}) {
             </div>
 
             <div class="card mb-3">
-                <div class="card-header"><h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Work Details</h6></div>
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>${tBilingual('proposal.form.workDetails')}</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-12" id="dual-workTitle-container"></div>
@@ -98,19 +99,19 @@ export async function renderProposalFormPage(params = {}) {
             </div>
 
             <div class="card mb-3">
-                <div class="card-header"><h6 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>Request Source</h6></div>
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-person-lines-fill me-2"></i>${tBilingual('proposal.form.requestSourceSection')}</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="requestSourceId" class="form-label">Source</label>
+                            <label for="requestSourceId" class="form-label">${tBilingual('proposal.form.requestSource')}</label>
                             <select class="form-select" id="requestSourceId">
-                                <option value="">Select Source</option>
+                                <option value="">${t('common.selectOption')}</option>
                                 ${requestSources.map(s => `<option value="${s.id}" ${existing?.requestSourceId === s.id ? 'selected' : ''}>${escapeHtml(s.name_En)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="col-md-8" id="dual-requestorName-container"></div>
                         <div class="col-md-4">
-                            <label for="requestorMobile" class="form-label">Requestor Mobile</label>
+                            <label for="requestorMobile" class="form-label">${tBilingual('proposal.form.requestorMobile')}</label>
                             <input type="tel" class="form-control" id="requestorMobile" maxlength="10" value="${escapeHtml(existing?.requestorMobile || '')}">
                         </div>
                         <div class="col-md-8" id="dual-requestorAddress-container"></div>
@@ -124,11 +125,11 @@ export async function renderProposalFormPage(params = {}) {
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            <label for="priority" class="form-label">${tBilingual('proposal.form.priority')} <span class="text-danger">*</span></label>
                             <select class="form-select" id="priority" required>
-                                <option value="High" ${existing?.priority === 'High' ? 'selected' : ''}>High</option>
-                                <option value="Medium" ${!existing || existing.priority === 'Medium' ? 'selected' : ''}>Medium</option>
-                                <option value="Low" ${existing?.priority === 'Low' ? 'selected' : ''}>Low</option>
+                                <option value="High" ${existing?.priority === 'High' ? 'selected' : ''}>${tBilingual('priority.high')}</option>
+                                <option value="Medium" ${!existing || existing.priority === 'Medium' ? 'selected' : ''}>${tBilingual('priority.medium')}</option>
+                                <option value="Low" ${existing?.priority === 'Low' ? 'selected' : ''}>${tBilingual('priority.low')}</option>
                             </select>
                         </div>
                     </div>
@@ -136,16 +137,16 @@ export async function renderProposalFormPage(params = {}) {
             </div>
 
             <div class="d-flex gap-2 justify-content-end">
-                <a href="#/dashboard" class="btn btn-outline-secondary">Cancel</a>
+                <a href="#/dashboard" class="btn btn-outline-secondary" data-i18n="common.cancel">Cancel</a>
                 <button type="submit" class="btn btn-primary" id="btn-save">
-                    <i class="bi bi-floppy me-1"></i>${isEdit ? 'Update' : 'Save Draft'}
+                    <i class="bi bi-floppy me-1"></i>${isEdit ? t('proposal.form.update') : t('proposal.form.save')}
                 </button>
             </div>
         </form>`;
 
     // ── Dual-language input components ──
     const dualArea = createDualLangInput({
-        name: 'area', label: 'Area', type: 'text',
+        name: 'area', label: 'Area', i18nKey: 'proposal.form.area', type: 'text',
         required: false, maxLength: 200,
         valueEn: existing?.area || '', valueMr: existing?.area_Mr || '',
         placeholderEn: 'Area/locality name', placeholderMr: 'भाग/परिसराचे नाव'
@@ -153,7 +154,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-area-container').appendChild(dualArea);
 
     const dualLocationAddress = createDualLangInput({
-        name: 'locationAddress', label: 'Location Address', type: 'textarea',
+        name: 'locationAddress', label: 'Location Address', i18nKey: 'proposal.form.locationAddress', type: 'textarea',
         required: false, rows: 2, maxLength: 500,
         valueEn: existing?.locationAddress_En || '', valueMr: existing?.locationAddress_Mr || '',
         placeholderEn: 'Location address in English', placeholderMr: 'स्थळाचा पत्ता मराठीत'
@@ -161,7 +162,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-locationAddress-container').appendChild(dualLocationAddress);
 
     const dualWorkTitle = createDualLangInput({
-        name: 'workTitle', label: 'Work Title', type: 'text',
+        name: 'workTitle', label: 'Work Title', i18nKey: 'proposal.form.workTitle', type: 'text',
         required: true, maxLength: 500,
         valueEn: existing?.workTitle_En || '', valueMr: existing?.workTitle_Mr || '',
         placeholderEn: 'Title of the proposed work', placeholderMr: 'प्रस्तावित कामाचे शीर्षक'
@@ -169,7 +170,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-workTitle-container').appendChild(dualWorkTitle);
 
     const dualWorkDescription = createDualLangInput({
-        name: 'workDescription', label: 'Work Description', type: 'textarea',
+        name: 'workDescription', label: 'Work Description', i18nKey: 'proposal.form.workDescription', type: 'textarea',
         required: true, rows: 4, maxLength: 4000,
         valueEn: existing?.workDescription_En || '', valueMr: existing?.workDescription_Mr || '',
         placeholderEn: 'Detailed description of the proposed work...', placeholderMr: 'प्रस्तावित कामाचे सविस्तर वर्णन...'
@@ -177,7 +178,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-workDescription-container').appendChild(dualWorkDescription);
 
     const dualRequestorName = createDualLangInput({
-        name: 'requestorName', label: 'Requestor Name', type: 'text',
+        name: 'requestorName', label: 'Requestor Name', i18nKey: 'proposal.form.requestorName', type: 'text',
         required: false, maxLength: 200,
         valueEn: existing?.requestorName || '', valueMr: existing?.requestorName_Mr || '',
         placeholderEn: 'Requestor name', placeholderMr: 'अर्जदाराचे नाव'
@@ -185,7 +186,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-requestorName-container').appendChild(dualRequestorName);
 
     const dualRequestorAddress = createDualLangInput({
-        name: 'requestorAddress', label: 'Requestor Address', type: 'text',
+        name: 'requestorAddress', label: 'Requestor Address', i18nKey: 'proposal.form.requestorAddress', type: 'text',
         required: false, maxLength: 500,
         valueEn: existing?.requestorAddress || '', valueMr: existing?.requestorAddress_Mr || '',
         placeholderEn: 'Requestor address', placeholderMr: 'अर्जदाराचा पत्ता'
@@ -193,7 +194,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-requestorAddress-container').appendChild(dualRequestorAddress);
 
     const dualRequestorDesignation = createDualLangInput({
-        name: 'requestorDesignation', label: 'Requestor Designation', type: 'text',
+        name: 'requestorDesignation', label: 'Requestor Designation', i18nKey: 'proposal.form.requestorDesignation', type: 'text',
         required: false, maxLength: 200,
         valueEn: existing?.requestorDesignation || '', valueMr: existing?.requestorDesignation_Mr || '',
         placeholderEn: 'Designation', placeholderMr: 'पदनाम'
@@ -201,7 +202,7 @@ export async function renderProposalFormPage(params = {}) {
     document.getElementById('dual-requestorDesignation-container').appendChild(dualRequestorDesignation);
 
     const dualRequestorOrganisation = createDualLangInput({
-        name: 'requestorOrganisation', label: 'Requestor Organisation', type: 'text',
+        name: 'requestorOrganisation', label: 'Requestor Organisation', i18nKey: 'proposal.form.requestorOrganisation', type: 'text',
         required: false, maxLength: 300,
         valueEn: existing?.requestorOrganisation || '', valueMr: existing?.requestorOrganisation_Mr || '',
         placeholderEn: 'Organisation', placeholderMr: 'संस्था'
@@ -298,7 +299,7 @@ export async function renderProposalFormPage(params = {}) {
         }
 
         btn.disabled = false;
-        btn.innerHTML = `<i class="bi bi-floppy me-1"></i>${isEdit ? 'Update' : 'Save Draft'}`;
+        btn.innerHTML = `<i class="bi bi-floppy me-1"></i>${isEdit ? t('proposal.form.update') : t('proposal.form.save')}`;
 
         if (res.success) {
             toast.success(isEdit ? 'Proposal updated' : 'Proposal saved as draft');

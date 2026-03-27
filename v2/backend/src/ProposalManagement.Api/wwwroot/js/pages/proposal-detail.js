@@ -3,7 +3,8 @@ import { api } from '../api.js';
 import { getUser, hasRole } from '../auth.js';
 import { toast } from '../toast.js';
 import { stageBadge, formatDate, formatCurrency, escapeHtml } from '../utils.js';
-import { bilingualDisplay } from '../dual-lang-input.js';
+import { bilingualDisplay, createDualLangInput } from '../dual-lang-input.js';
+import { t, tBilingual, onLangChange, translatePage } from '../i18n.js';
 
 let currentProposal = null;
 let currentTab = '1';
@@ -33,37 +34,37 @@ export async function renderProposalDetailPage(params) {
         <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
             <div>
                 <a href="#/dashboard" class="text-decoration-none text-muted" style="font-size:0.85rem;">
-                    <i class="bi bi-arrow-left me-1"></i>Back
+                    <i class="bi bi-arrow-left me-1"></i><span data-i18n="proposal.detail.back">Back</span>
                 </a>
                 <h4 class="mb-1 mt-1">${escapeHtml(p.proposalNumber)}</h4>
                 <p class="text-muted mb-0" style="font-size:0.85rem;">
                     ${stageBadge(p.currentStage)}
-                    <span class="ms-2">Created by ${escapeHtml(p.createdByName)} on ${formatDate(p.createdAt)}</span>
+                    <span class="ms-2">${t('proposal.detail.createdBy')} ${escapeHtml(p.createdByName)} ${t('proposal.detail.on')} ${formatDate(p.createdAt)}</span>
                     <span class="ms-2 badge bg-light text-dark">Tab ${p.completedTab || 1}/6</span>
                 </p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-                ${canEdit ? `<a href="#/proposals/${id}/edit" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit Tab 1</a>` : ''}
+                ${canEdit ? `<a href="#/proposals/${id}/edit" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i><span data-i18n="proposal.detail.editTab1">Edit Tab 1</span></a>` : ''}
                 ${canApprove ? `
-                    <button class="btn btn-success btn-sm" id="btn-approve"><i class="bi bi-check-lg me-1"></i>Approve</button>
-                    <button class="btn btn-warning btn-sm" id="btn-pushback"><i class="bi bi-arrow-return-left me-1"></i>Push Back</button>
+                    <button class="btn btn-success btn-sm" id="btn-approve"><i class="bi bi-check-lg me-1"></i><span data-i18n="workflow.approve">Approve</span></button>
+                    <button class="btn btn-warning btn-sm" id="btn-pushback"><i class="bi bi-arrow-return-left me-1"></i><span data-i18n="workflow.pushBack">Push Back</span></button>
                 ` : ''}
                 ${isCreator && (p.currentStage === 'Draft' || p.currentStage === 'PushedBack') ? `
-                    <button class="btn btn-outline-primary btn-sm" id="btn-submit"><i class="bi bi-send me-1"></i>Submit</button>
+                    <button class="btn btn-outline-primary btn-sm" id="btn-submit"><i class="bi bi-send me-1"></i><span data-i18n="workflow.submit">Submit</span></button>
                 ` : ''}
             </div>
         </div>
 
         <!-- Tab Navigation -->
         <ul class="nav nav-tabs proposal-tabs mb-0" role="tablist">
-            <li class="nav-item"><button class="nav-link active" data-tab="1"><i class="bi bi-file-text me-1"></i>Proposal</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="2"><i class="bi bi-geo-alt me-1"></i>Field Visit</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="3"><i class="bi bi-calculator me-1"></i>Estimate</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="4"><i class="bi bi-shield-check me-1"></i>Tech Sanction</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="5"><i class="bi bi-receipt me-1"></i>PRAMA</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="6"><i class="bi bi-wallet2 me-1"></i>Budget</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="timeline"><i class="bi bi-clock-history me-1"></i>Timeline</button></li>
-            <li class="nav-item"><button class="nav-link" data-tab="docs"><i class="bi bi-paperclip me-1"></i>Additional Docs</button></li>
+            <li class="nav-item"><button class="nav-link active" data-tab="1"><i class="bi bi-file-text me-1"></i><span data-i18n="proposal.detail.info">Proposal</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="2"><i class="bi bi-geo-alt me-1"></i><span data-i18n="proposal.detail.fieldVisit">Field Visit</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="3"><i class="bi bi-calculator me-1"></i><span data-i18n="proposal.detail.estimate">Estimate</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="4"><i class="bi bi-shield-check me-1"></i><span data-i18n="proposal.detail.techSanction">Tech Sanction</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="5"><i class="bi bi-receipt me-1"></i><span data-i18n="proposal.detail.prama">PRAMA</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="6"><i class="bi bi-wallet2 me-1"></i><span data-i18n="proposal.detail.budget">Budget</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="timeline"><i class="bi bi-clock-history me-1"></i><span data-i18n="proposal.detail.timeline">Timeline</span></button></li>
+            <li class="nav-item"><button class="nav-link" data-tab="docs"><i class="bi bi-paperclip me-1"></i><span data-i18n="proposal.detail.documents">Additional Docs</span></button></li>
         </ul>
 
         <div class="card border-top-0 rounded-0 rounded-bottom">
@@ -73,25 +74,27 @@ export async function renderProposalDetailPage(params) {
         <!-- Approve Modal -->
         <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog"><div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Approve Proposal</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-header"><h5 class="modal-title">${tBilingual('workflow.approveTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form id="approve-form"><div class="modal-body">
-                    <div class="mb-3"><label for="opinion" class="form-label">Opinion / Remarks</label><textarea class="form-control" id="opinion" rows="3"></textarea></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="disclaimer-check" required><label class="form-check-label" for="disclaimer-check">I accept the disclaimer and confirm this approval.</label></div>
-                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Confirm Approve</button></div></form>
+                    <div class="mb-3"><label for="opinion" class="form-label">${tBilingual('workflow.opinion')}</label><textarea class="form-control" id="opinion" rows="3"></textarea></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" id="disclaimer-check" required><label class="form-check-label" for="disclaimer-check">${t('workflow.disclaimer')}</label></div>
+                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-success" data-i18n="workflow.confirmApprove">Confirm Approve</button></div></form>
             </div></div>
         </div>
 
         <!-- PushBack Modal -->
         <div class="modal fade" id="pushbackModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog"><div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Push Back Proposal</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+                <div class="modal-header"><h5 class="modal-title">${tBilingual('workflow.pushBackTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form id="pushback-form"><div class="modal-body">
-                    <div class="mb-3"><label for="pushback-note" class="form-label">Reason <span class="text-danger">*</span></label><textarea class="form-control" id="pushback-note" rows="3" required></textarea></div>
-                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning">Confirm Push Back</button></div></form>
+                    <div class="mb-3"><label for="pushback-note" class="form-label">${tBilingual('workflow.reason')} <span class="text-danger">*</span></label><textarea class="form-control" id="pushback-note" rows="3" required></textarea></div>
+                </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-warning" data-i18n="workflow.confirmPushBack">Confirm Push Back</button></div></form>
             </div></div>
         </div>`;
 
     // Wire tab navigation
+    translatePage(content);
+    const _unsub = onLangChange(() => translatePage(content));
     document.querySelectorAll('.proposal-tabs .nav-link').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.proposal-tabs .nav-link').forEach(b => b.classList.remove('active'));
@@ -131,21 +134,21 @@ function renderTab1(c) {
     const p = currentProposal;
     c.innerHTML = `
         <div class="row g-3">
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Department</label><div class="fw-medium">${escapeHtml(p.departmentName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Work Category</label><div class="fw-medium">${escapeHtml(p.workCategoryName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Priority</label><div><span class="badge bg-${p.priority === 'High' ? 'danger' : p.priority === 'Low' ? 'secondary' : 'warning text-dark'}">${p.priority}</span></div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Zone</label><div>${escapeHtml(p.zoneName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Prabhag</label><div>${escapeHtml(p.prabhagName || '—')}</div></div>
-            ${bilingualDisplay('Area', p.area, p.area_Mr, 'col-md-4')}
-            ${bilingualDisplay('Work Title', p.workTitle_En, p.workTitle_Mr)}
-            ${bilingualDisplay('Work Description', p.workDescription_En, p.workDescription_Mr)}
-            ${bilingualDisplay('Location Address', p.locationAddress_En, p.locationAddress_Mr)}
-            ${p.requestSourceName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Request Source</label><div>${escapeHtml(p.requestSourceName)}</div></div>` : ''}
-            ${p.requestorName || p.requestorName_Mr ? bilingualDisplay('Requestor Name', p.requestorName, p.requestorName_Mr, 'col-md-6') : ''}
-            ${p.requestorMobile ? `<div class="col-md-6"><label class="form-label text-muted small mb-0">Requestor Mobile</label><div>${escapeHtml(p.requestorMobile)}</div></div>` : ''}
-            ${p.requestorAddress || p.requestorAddress_Mr ? bilingualDisplay('Requestor Address', p.requestorAddress, p.requestorAddress_Mr) : ''}
-            ${p.requestorDesignation || p.requestorDesignation_Mr ? bilingualDisplay('Requestor Designation', p.requestorDesignation, p.requestorDesignation_Mr, 'col-md-6') : ''}
-            ${p.requestorOrganisation || p.requestorOrganisation_Mr ? bilingualDisplay('Requestor Organisation', p.requestorOrganisation, p.requestorOrganisation_Mr, 'col-md-6') : ''}
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.department')}</label><div class="fw-medium">${escapeHtml(p.departmentName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.workCategory')}</label><div class="fw-medium">${escapeHtml(p.workCategoryName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.priority')}</label><div><span class="badge bg-${p.priority === 'High' ? 'danger' : p.priority === 'Low' ? 'secondary' : 'warning text-dark'}">${p.priority}</span></div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.zone')}</label><div>${escapeHtml(p.zoneName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.prabhag')}</label><div>${escapeHtml(p.prabhagName || '—')}</div></div>
+            ${bilingualDisplay('Area', p.area, p.area_Mr, 'col-md-4', t('proposal.detail.area', 'mr'))}
+            ${bilingualDisplay('Work Title', p.workTitle_En, p.workTitle_Mr, 'col-12', t('proposal.detail.workTitle', 'mr'))}
+            ${bilingualDisplay('Work Description', p.workDescription_En, p.workDescription_Mr, 'col-12', t('proposal.detail.workDescription', 'mr'))}
+            ${bilingualDisplay('Location Address', p.locationAddress_En, p.locationAddress_Mr, 'col-12', t('proposal.detail.locationAddress', 'mr'))}
+            ${p.requestSourceName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.requestSource')}</label><div>${escapeHtml(p.requestSourceName)}</div></div>` : ''}
+            ${p.requestorName || p.requestorName_Mr ? bilingualDisplay('Requestor Name', p.requestorName, p.requestorName_Mr, 'col-md-6', t('proposal.detail.requestorName', 'mr')) : ''}
+            ${p.requestorMobile ? `<div class="col-md-6"><label class="form-label text-muted small mb-0">${tBilingual('proposal.detail.requestorMobile')}</label><div>${escapeHtml(p.requestorMobile)}</div></div>` : ''}
+            ${p.requestorAddress || p.requestorAddress_Mr ? bilingualDisplay('Requestor Address', p.requestorAddress, p.requestorAddress_Mr, 'col-12', t('proposal.detail.requestorAddress', 'mr')) : ''}
+            ${p.requestorDesignation || p.requestorDesignation_Mr ? bilingualDisplay('Requestor Designation', p.requestorDesignation, p.requestorDesignation_Mr, 'col-md-6', t('proposal.detail.requestorDesignation', 'mr')) : ''}
+            ${p.requestorOrganisation || p.requestorOrganisation_Mr ? bilingualDisplay('Requestor Organisation', p.requestorOrganisation, p.requestorOrganisation_Mr, 'col-md-6', t('proposal.detail.requestorOrganisation', 'mr')) : ''}
         </div>`;
 }
 
@@ -157,25 +160,25 @@ async function renderTab2(c, pid, canEdit) {
     const hasCompleted = visits.some(fv => fv.status === 'Completed' && fv.photos?.length > 0);
 
     let html = `<div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0"><i class="bi bi-geo-alt me-1"></i>Field Visits (${visits.length})</h6>
-        ${canEdit ? `<button class="btn btn-primary btn-sm" id="btn-assign-fv"><i class="bi bi-plus me-1"></i>Assign Visit</button>` : ''}
+        <h6 class="mb-0"><i class="bi bi-geo-alt me-1"></i>${t('fieldVisit.title')} (${visits.length})</h6>
+        ${canEdit ? `<button class="btn btn-primary btn-sm" id="btn-assign-fv"><i class="bi bi-plus me-1"></i>${t('fieldVisit.assignVisit')}</button>` : ''}
     </div>`;
 
     // ── Mandatory photo status banner ──
     if (!hasCompleted) {
         html += `<div class="alert alert-warning d-flex align-items-center py-2 mb-3" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-            <div><strong>Field visit photos are mandatory.</strong> At least one completed field visit with photos is required before the proposal can be submitted for approval.</div>
+            <div><strong>${t('fieldVisit.mandatoryWarning')}</strong> ${t('fieldVisit.mandatoryDetail')}</div>
         </div>`;
     } else {
         html += `<div class="alert alert-success d-flex align-items-center py-2 mb-3" role="alert">
             <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-            <div><strong>${totalPhotos} photo(s) uploaded</strong> across ${visits.filter(fv => fv.status === 'Completed').length} completed visit(s). Field visit requirement satisfied.</div>
+            <div><strong>${totalPhotos} photo(s) uploaded</strong> across ${visits.filter(fv => fv.status === 'Completed').length} completed visit(s). ${t('fieldVisit.photosSatisfied')}</div>
         </div>`;
     }
 
     if (visits.length === 0) {
-        html += '<p class="text-muted">No field visits assigned yet. Assign a visit to begin site inspection.</p>';
+        html += `<p class="text-muted">${t('fieldVisit.noVisits')}</p>`;
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
@@ -186,29 +189,29 @@ async function renderTab2(c, pid, canEdit) {
             html += `<div class="card mb-3 ${fv.status === 'Completed' ? 'border-success' : ''}">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>Visit #${fv.visitNumber}</strong>
+                        <strong>${t('fieldVisit.visit')} #${fv.visitNumber}</strong>
                         <span class="badge bg-${sBg} ms-2">${fv.status}</span>
-                        <span class="text-muted ms-2 small">Assigned: ${escapeHtml(fv.assignedToName || '—')}</span>
+                        <span class="text-muted ms-2 small">${t('fieldVisit.assigned')}: ${escapeHtml(fv.assignedToName || '—')}</span>
                     </div>
                     <small class="text-muted">${formatDate(fv.createdAt)}</small>
                 </div>
                 <div class="card-body py-3">
-                    ${fv.siteConditionName ? `<div class="small mb-1">Site Condition: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
-                    ${fv.problemDescription_En || fv.problemDescription_Mr ? `<div class="small mb-1"><strong>Problem:</strong> ${escapeHtml(fv.problemDescription_En || '')}${fv.problemDescription_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.problemDescription_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.measurements_En || fv.measurements_Mr ? `<div class="small mb-1"><strong>Measurements:</strong> ${escapeHtml(fv.measurements_En || '')}${fv.measurements_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.measurements_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.remark_En || fv.remark_Mr ? `<div class="small mb-1"><strong>Remark:</strong> ${escapeHtml(fv.remark_En || '')}${fv.remark_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.remark_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.recommendation_En || fv.recommendation_Mr ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>Rec: ${escapeHtml(fv.recommendation_En || '')}${fv.recommendation_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.recommendation_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.siteConditionName ? `<div class="small mb-1">${t('fieldVisit.siteCondition')}: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
+                    ${fv.problemDescription_En || fv.problemDescription_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.problem')}:</strong> ${escapeHtml(fv.problemDescription_En || '')}${fv.problemDescription_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.problemDescription_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.measurements_En || fv.measurements_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.measurements')}:</strong> ${escapeHtml(fv.measurements_En || '')}${fv.measurements_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.measurements_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.remark_En || fv.remark_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.remark')}:</strong> ${escapeHtml(fv.remark_En || '')}${fv.remark_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.remark_Mr)}</span>` : ''}</div>` : ''}
+                    ${fv.recommendation_En || fv.recommendation_Mr ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>${t('fieldVisit.recommendation')}: ${escapeHtml(fv.recommendation_En || '')}${fv.recommendation_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.recommendation_Mr)}</span>` : ''}</div>` : ''}
                     ${fv.gpsLatitude ? `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
-                    ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>Completed: ${formatDate(fv.completedAt)}</div>` : ''}
+                    ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.completed')}: ${formatDate(fv.completedAt)}</div>` : ''}
 
                     <!-- ── Site Photos Section (always visible per visit) ── -->
                     <div class="border rounded p-3 mt-2" style="background:#f8f9fa;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>Site Photos
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>${t('fieldVisit.sitePhotos')}
                                 <span class="badge ${photoCount > 0 ? 'bg-primary' : 'bg-danger'} ms-1">${photoCount}</span>
                             </h6>
                             ${canUpload ? `<label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
-                                <i class="bi bi-camera-fill me-1"></i>Upload Photos
+                                <i class="bi bi-camera-fill me-1"></i>${t('fieldVisit.uploadPhotos')}
                                 <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
                             </label>` : ''}
                         </div>
@@ -216,12 +219,12 @@ async function renderTab2(c, pid, canEdit) {
                         ${photoCount === 0 && canUpload ? `
                             <div class="text-center py-4 border border-2 border-dashed rounded bg-white fv-drop-zone" data-id="${fv.id}" style="cursor:pointer;">
                                 <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
-                                <p class="text-muted mb-1 fw-medium">Drag & drop site photos here</p>
-                                <p class="text-muted small mb-0">or click "Upload Photos" above · JPEG, PNG, WebP · max 5 MB each</p>
-                                ${fv.status !== 'Completed' ? '<p class="text-danger small mt-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>Photos are mandatory for this visit</p>' : ''}
+                                <p class="text-muted mb-1 fw-medium">${t('fieldVisit.dragDrop')}</p>
+                                <p class="text-muted small mb-0">${t('fieldVisit.dragDropHint')} · JPEG, PNG, WebP · max 5 MB each</p>
+                                ${fv.status !== 'Completed' ? `<p class="text-danger small mt-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>${t('fieldVisit.photosMandatory')}</p>` : ''}
                             </div>` : ''}
 
-                        ${photoCount === 0 && !canUpload ? `<p class="text-muted small mb-0">No photos uploaded yet.</p>` : ''}
+                        ${photoCount === 0 && !canUpload ? `<p class="text-muted small mb-0">${t('fieldVisit.noPhotos')}</p>` : ''}
 
                         ${photoCount > 0 ? `
                             <div class="d-flex flex-wrap gap-2">
@@ -238,7 +241,7 @@ async function renderTab2(c, pid, canEdit) {
                                     <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white shadow-sm fv-drop-zone"  
                                         data-id="${fv.id}" style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
                                         <div class="text-center text-muted">
-                                            <i class="bi bi-plus-lg fs-4"></i><br><small>Add more</small>
+                                            <i class="bi bi-plus-lg fs-4"></i><br><small>${t('fieldVisit.addMore')}</small>
                                         </div>
                                         <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
                                     </label>` : ''}
@@ -247,7 +250,7 @@ async function renderTab2(c, pid, canEdit) {
 
                     ${canModifyVisit && !fv.completedAt ? `
                         <div class="mt-3">
-                            <button class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>Mark as Complete</button>
+                            <button class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.markComplete')}</button>
                         </div>` : ''}
                 </div>
             </div>`;
@@ -259,18 +262,18 @@ async function renderTab2(c, pid, canEdit) {
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header py-2">
-                    <h6 class="modal-title mb-0">Assign Field Visit</h6>
+                    <h6 class="modal-title mb-0">${t('fieldVisit.assignTitle')}</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="fv-engineer-select" class="form-label">Select Engineer (JE / TS)</label>
+                    <label for="fv-engineer-select" class="form-label">${t('fieldVisit.selectEngineer')}</label>
                     <select class="form-select" id="fv-engineer-select" required>
                         <option value="">Loading...</option>
                     </select>
                 </div>
                 <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-assign-fv">Assign</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${t('common.cancel')}</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-assign-fv">${t('fieldVisit.assign')}</button>
                 </div>
             </div>
         </div>
@@ -288,7 +291,7 @@ async function renderTab2(c, pid, canEdit) {
 
         const engRes = await api.get(`/proposals/${pid}/field-visits/assignable-engineers`);
         if (engRes.success && engRes.data) {
-            select.innerHTML = '<option value="">— Select an Engineer —</option>' +
+            select.innerHTML = `<option value="">— ${t('fieldVisit.selectPlaceholder')} —</option>` +
                 engRes.data.map(e => `<option value="${e.id}">${escapeHtml(e.fullName_En)} (${e.role}${e.departmentName ? ' — ' + escapeHtml(e.departmentName) : ''})</option>`).join('');
         } else {
             select.innerHTML = '<option value="">No engineers found</option>';
@@ -374,10 +377,10 @@ async function renderTab3(c, pid, canEdit) {
     const est = res.success ? res.data : null;
 
     if (!est && canEdit) {
-        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-calculator me-1"></i>Estimate</h6>
+        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-calculator me-1"></i>${tBilingual('estimate.title')}</h6>
         <form id="est-form"><div class="row g-3">
-            <div class="col-md-6"><label for="estCost" class="form-label">Estimated Cost (₹)</label><input type="number" class="form-control" id="estCost" step="0.01" min="0" required></div>
-        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>Save Estimate</button></form>`;
+            <div class="col-md-6"><label for="estCost" class="form-label">${tBilingual('estimate.cost')} (₹)</label><input type="number" class="form-control" id="estCost" step="0.01" min="0" required></div>
+        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>${t('estimate.save')}</button></form>`;
         document.getElementById('est-form').addEventListener('submit', async e => {
             e.preventDefault();
             const r = await api.post(`/proposals/${pid}/estimate`, { proposalId: pid, estimatedCost: parseFloat(document.getElementById('estCost').value) });
@@ -385,24 +388,24 @@ async function renderTab3(c, pid, canEdit) {
         });
         return;
     }
-    if (!est) { c.innerHTML = '<p class="text-muted">No estimate created yet.</p>'; return; }
+    if (!est) { c.innerHTML = `<p class="text-muted">${t('estimate.noRecord')}</p>`; return; }
 
     const sBg = est.status === 'Approved' ? 'success' : est.status === 'SentForApproval' ? 'warning text-dark' : 'secondary';
-    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-calculator me-1"></i>Estimate</h6>
+    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-calculator me-1"></i>${tBilingual('estimate.title')}</h6>
         <div class="row g-3">
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Estimated Cost</label><div class="fw-medium fs-5">${formatCurrency(est.estimatedCost)}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Status</label><div><span class="badge bg-${sBg}">${est.status}</span></div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Prepared By</label><div>${escapeHtml(est.preparedByName || '—')}</div></div>
-            ${est.sentToName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Sent To</label><div>${escapeHtml(est.sentToName)} (${est.sentToRole})</div></div>` : ''}
-            ${est.approvedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Approved By</label><div>${escapeHtml(est.approvedByName)}</div></div>` : ''}
-            ${est.approvedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Approved At</label><div>${formatDate(est.approvedAt)}</div></div>` : ''}
-            ${est.approverOpinion_En || est.approverOpinion_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0">Opinion</label><div>${escapeHtml(est.approverOpinion_En || '')}${est.approverOpinion_Mr ? `<br><span class="text-muted" lang="mr">${escapeHtml(est.approverOpinion_Mr)}</span>` : ''}</div></div>` : ''}
-            ${est.returnQueryNote_En || est.returnQueryNote_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0 text-danger">Return Query</label><div class="text-danger">${escapeHtml(est.returnQueryNote_En || '')}${est.returnQueryNote_Mr ? `<br><span lang="mr">${escapeHtml(est.returnQueryNote_Mr)}</span>` : ''}</div></div>` : ''}
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.cost')}</label><div class="fw-medium fs-5">${formatCurrency(est.estimatedCost)}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.status')}</label><div><span class="badge bg-${sBg}">${est.status}</span></div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.preparedBy')}</label><div>${escapeHtml(est.preparedByName || '—')}</div></div>
+            ${est.sentToName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.sentTo')}</label><div>${escapeHtml(est.sentToName)} (${est.sentToRole})</div></div>` : ''}
+            ${est.approvedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.approvedBy')}</label><div>${escapeHtml(est.approvedByName)}</div></div>` : ''}
+            ${est.approvedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.approvedAt')}</label><div>${formatDate(est.approvedAt)}</div></div>` : ''}
+            ${est.approverOpinion_En || est.approverOpinion_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0">${tBilingual('estimate.opinion')}</label><div>${escapeHtml(est.approverOpinion_En || '')}${est.approverOpinion_Mr ? `<br><span class="text-muted" lang="mr">${escapeHtml(est.approverOpinion_Mr)}</span>` : ''}</div></div>` : ''}
+            ${est.returnQueryNote_En || est.returnQueryNote_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0 text-danger">${tBilingual('estimate.returnQuery')}</label><div class="text-danger">${escapeHtml(est.returnQueryNote_En || '')}${est.returnQueryNote_Mr ? `<br><span lang="mr">${escapeHtml(est.returnQueryNote_Mr)}</span>` : ''}</div></div>` : ''}
         </div>
-        ${canEdit && est.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-outline-primary btn-sm" id="btn-send-est"><i class="bi bi-send me-1"></i>Send for Approval</button></div>` : ''}
+        ${canEdit && est.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-outline-primary btn-sm" id="btn-send-est"><i class="bi bi-send me-1"></i>${t('estimate.sendForApproval')}</button></div>` : ''}
         ${canEdit && est.status === 'SentForApproval' ? `<div class="mt-3">
-            <button class="btn btn-success btn-sm" id="btn-approve-est"><i class="bi bi-check-lg me-1"></i>Approve</button>
-            <button class="btn btn-warning btn-sm ms-2" id="btn-return-est"><i class="bi bi-arrow-return-left me-1"></i>Return</button>
+            <button class="btn btn-success btn-sm" id="btn-approve-est"><i class="bi bi-check-lg me-1"></i>${t('estimate.approve')}</button>
+            <button class="btn btn-warning btn-sm ms-2" id="btn-return-est"><i class="bi bi-arrow-return-left me-1"></i>${t('estimate.return')}</button>
         </div>` : ''}`;
 
     document.getElementById('btn-send-est')?.addEventListener('click', async () => {
@@ -414,7 +417,7 @@ async function renderTab3(c, pid, canEdit) {
         if (r.success) { toast.success('Estimate approved'); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Failed');
     });
     document.getElementById('btn-return-est')?.addEventListener('click', async () => {
-        const note = prompt('Enter return query note:');
+        const note = prompt(t('estimate.returnPrompt'));
         if (!note) return;
         const r = await api.post(`/proposals/${pid}/estimate/${est.id}/return`, { queryNote_En: note });
         if (r.success) { toast.success('Estimate returned'); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Failed');
@@ -427,58 +430,69 @@ async function renderTab4(c, pid, canEdit) {
     const ts = res.success ? res.data : null;
 
     if (!ts && canEdit) {
-        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-shield-check me-1"></i>Technical Sanction</h6>
+        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-shield-check me-1"></i>${tBilingual('techSanction.title')}</h6>
         <form id="ts-form"><div class="row g-3">
-            <div class="col-md-4"><label for="tsNum" class="form-label">TS Number</label><input type="text" class="form-control" id="tsNum"></div>
-            <div class="col-md-4"><label for="tsDate" class="form-label">TS Date</label><input type="date" class="form-control" id="tsDate"></div>
-            <div class="col-md-4"><label for="tsAmt" class="form-label">TS Amount (₹)</label><input type="number" class="form-control" id="tsAmt" step="0.01"></div>
-            <div class="col-md-6"><label for="tsDesc" class="form-label">Description (English)</label><textarea class="form-control" id="tsDesc" rows="3"></textarea></div>
-            <div class="col-md-6"><label for="tsDescMr" class="form-label">वर्णन (मराठी)</label><textarea class="form-control" id="tsDescMr" rows="3" lang="mr"></textarea></div>
-            <div class="col-md-6"><label for="tsSanctBy" class="form-label">Sanctioned By (EN)</label><input type="text" class="form-control" id="tsSanctBy"></div>
-            <div class="col-md-6"><label for="tsSanctByMr" class="form-label">मंजूरी देणार (मराठी)</label><input type="text" class="form-control" id="tsSanctByMr" lang="mr"></div>
-            <div class="col-md-6"><label for="tsSanctDept" class="form-label">Dept (EN)</label><input type="text" class="form-control" id="tsSanctDept"></div>
-            <div class="col-md-6"><label for="tsSanctDeptMr" class="form-label">विभाग (मराठी)</label><input type="text" class="form-control" id="tsSanctDeptMr" lang="mr"></div>
-            <div class="col-md-6"><label for="tsSanctDesig" class="form-label">Designation (EN)</label><input type="text" class="form-control" id="tsSanctDesig"></div>
-            <div class="col-md-6"><label for="tsSanctDesigMr" class="form-label">पदनाम (मराठी)</label><input type="text" class="form-control" id="tsSanctDesigMr" lang="mr"></div>
-        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>Save</button></form>`;
+            <div class="col-md-4"><label for="tsNum" class="form-label">${tBilingual('techSanction.number')}</label><input type="text" class="form-control" id="tsNum"></div>
+            <div class="col-md-4"><label for="tsDate" class="form-label">${tBilingual('techSanction.date')}</label><input type="date" class="form-control" id="tsDate"></div>
+            <div class="col-md-4"><label for="tsAmt" class="form-label">${tBilingual('techSanction.amount')} (₹)</label><input type="number" class="form-control" id="tsAmt" step="0.01"></div>
+            <div class="col-12" id="ts-desc-container"></div>
+            <div class="col-12" id="ts-sanctBy-container"></div>
+            <div class="col-12" id="ts-sanctDept-container"></div>
+            <div class="col-12" id="ts-sanctDesig-container"></div>
+        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>${t('techSanction.save')}</button></form>`;
+
+        // Create dual-lang inputs for TS form
+        const dualDesc = createDualLangInput({ name: 'tsDesc', label: 'Description', i18nKey: 'techSanction.description', type: 'textarea', rows: 3 });
+        document.getElementById('ts-desc-container').appendChild(dualDesc);
+        const dualSanctBy = createDualLangInput({ name: 'tsSanctBy', label: 'Sanctioned By', i18nKey: 'techSanction.sanctionedBy', type: 'text' });
+        document.getElementById('ts-sanctBy-container').appendChild(dualSanctBy);
+        const dualSanctDept = createDualLangInput({ name: 'tsSanctDept', label: 'Dept', i18nKey: 'techSanction.dept', type: 'text' });
+        document.getElementById('ts-sanctDept-container').appendChild(dualSanctDept);
+        const dualSanctDesig = createDualLangInput({ name: 'tsSanctDesig', label: 'Designation', i18nKey: 'techSanction.designation', type: 'text' });
+        document.getElementById('ts-sanctDesig-container').appendChild(dualSanctDesig);
+
         document.getElementById('ts-form').addEventListener('submit', async e => {
             e.preventDefault();
+            const descVals = dualDesc.getValues();
+            const sanctByVals = dualSanctBy.getValues();
+            const sanctDeptVals = dualSanctDept.getValues();
+            const sanctDesigVals = dualSanctDesig.getValues();
             const body = { proposalId: pid,
                 tsNumber: document.getElementById('tsNum').value || null,
                 tsDate: document.getElementById('tsDate').value || null,
                 tsAmount: parseFloat(document.getElementById('tsAmt').value) || null,
-                description_En: document.getElementById('tsDesc').value || null,
-                description_Mr: document.getElementById('tsDescMr').value || null,
-                sanctionedByName: document.getElementById('tsSanctBy').value || null,
-                sanctionedByName_Mr: document.getElementById('tsSanctByMr').value || null,
-                sanctionedByDept: document.getElementById('tsSanctDept').value || null,
-                sanctionedByDept_Mr: document.getElementById('tsSanctDeptMr').value || null,
-                sanctionedByDesignation: document.getElementById('tsSanctDesig').value || null,
-                sanctionedByDesignation_Mr: document.getElementById('tsSanctDesigMr').value || null
+                description_En: descVals.en || null,
+                description_Mr: descVals.mr || null,
+                sanctionedByName: sanctByVals.en || null,
+                sanctionedByName_Mr: sanctByVals.mr || null,
+                sanctionedByDept: sanctDeptVals.en || null,
+                sanctionedByDept_Mr: sanctDeptVals.mr || null,
+                sanctionedByDesignation: sanctDesigVals.en || null,
+                sanctionedByDesignation_Mr: sanctDesigVals.mr || null
             };
             const r = await api.post(`/proposals/${pid}/technical-sanction`, body);
             if (r.success) { toast.success('Saved'); await renderTab4(c, pid, canEdit); } else toast.error(r.error || 'Failed');
         });
         return;
     }
-    if (!ts) { c.innerHTML = '<p class="text-muted">No technical sanction record yet.</p>'; return; }
+    if (!ts) { c.innerHTML = `<p class="text-muted">${t('techSanction.noRecord')}</p>`; return; }
 
     const sBg = ts.status === 'Signed' ? 'success' : 'secondary';
-    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-shield-check me-1"></i>Technical Sanction</h6>
+    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-shield-check me-1"></i>${tBilingual('techSanction.title')}</h6>
         <div class="row g-3">
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">TS Number</label><div>${escapeHtml(ts.tsNumber || '—')}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">TS Date</label><div>${formatDate(ts.tsDate)}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">TS Amount</label><div class="fw-medium">${formatCurrency(ts.tsAmount)}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">Status</label><div><span class="badge bg-${sBg}">${ts.status}</span></div></div>
-            ${bilingualDisplay('Sanctioned By', ts.sanctionedByName, ts.sanctionedByName_Mr, 'col-md-4')}
-            ${bilingualDisplay('Dept', ts.sanctionedByDept, ts.sanctionedByDept_Mr, 'col-md-4')}
-            ${bilingualDisplay('Designation', ts.sanctionedByDesignation, ts.sanctionedByDesignation_Mr, 'col-md-4')}
-            ${ts.description_En || ts.description_Mr ? bilingualDisplay('Description', ts.description_En, ts.description_Mr) : ''}
-            ${ts.preparedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Prepared By</label><div>${escapeHtml(ts.preparedByName)}</div></div>` : ''}
-            ${ts.signedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Signed By</label><div>${escapeHtml(ts.signedByName)}</div></div>` : ''}
-            ${ts.signedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">Signed At</label><div>${formatDate(ts.signedAt)}</div></div>` : ''}
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.number')}</label><div>${escapeHtml(ts.tsNumber || '—')}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.date')}</label><div>${formatDate(ts.tsDate)}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.amount')}</label><div class="fw-medium">${formatCurrency(ts.tsAmount)}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.status')}</label><div><span class="badge bg-${sBg}">${ts.status}</span></div></div>
+            ${bilingualDisplay('Sanctioned By', ts.sanctionedByName, ts.sanctionedByName_Mr, 'col-md-4', t('techSanction.sanctionedBy', 'mr'))}
+            ${bilingualDisplay('Dept', ts.sanctionedByDept, ts.sanctionedByDept_Mr, 'col-md-4', t('techSanction.dept', 'mr'))}
+            ${bilingualDisplay('Designation', ts.sanctionedByDesignation, ts.sanctionedByDesignation_Mr, 'col-md-4', t('techSanction.designation', 'mr'))}
+            ${ts.description_En || ts.description_Mr ? bilingualDisplay('Description', ts.description_En, ts.description_Mr, 'col-12', t('techSanction.description', 'mr')) : ''}
+            ${ts.preparedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.preparedBy')}</label><div>${escapeHtml(ts.preparedByName)}</div></div>` : ''}
+            ${ts.signedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.signedBy')}</label><div>${escapeHtml(ts.signedByName)}</div></div>` : ''}
+            ${ts.signedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.signedAt')}</label><div>${formatDate(ts.signedAt)}</div></div>` : ''}
         </div>
-        ${canEdit && ts.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-success btn-sm" id="btn-sign-ts"><i class="bi bi-pen me-1"></i>Sign</button></div>` : ''}`;
+        ${canEdit && ts.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-success btn-sm" id="btn-sign-ts"><i class="bi bi-pen me-1"></i>${t('techSanction.sign')}</button></div>` : ''}`;
 
     document.getElementById('btn-sign-ts')?.addEventListener('click', async () => {
         const r = await api.post(`/proposals/${pid}/technical-sanction/${ts.id}/sign`);
@@ -499,46 +513,54 @@ async function renderTab5(c, pid, canEdit) {
     const bhs = bhRes.success ? bhRes.data : [];
 
     if (canEdit) {
-        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-receipt me-1"></i>PRAMA (प्रमा) Details</h6>
+        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-receipt me-1"></i>${tBilingual('prama.title')}</h6>
         <form id="prama-form"><div class="row g-3">
-            <div class="col-md-4"><label for="pFT" class="form-label">Fund Type</label><select class="form-select" id="pFT"><option value="">Select</option>${fts.map(f => `<option value="${f.id}" ${pd?.fundTypeId === f.id ? 'selected' : ''}>${escapeHtml(f.name_En)}</option>`).join('')}</select></div>
-            <div class="col-md-4"><label for="pBH" class="form-label">Budget Head</label><select class="form-select" id="pBH"><option value="">Select</option>${bhs.map(b => `<option value="${b.id}" ${pd?.budgetHeadId === b.id ? 'selected' : ''}>${escapeHtml(b.name_En)}</option>`).join('')}</select></div>
-            <div class="col-md-4"><label for="pYear" class="form-label">Fund Year</label><input type="text" class="form-control" id="pYear" value="${escapeHtml(pd?.fundApprovalYear || '')}" placeholder="2025-26"></div>
-            <div class="col-md-6"><label for="pDeptEn" class="form-label">Dept User (English)</label><input type="text" class="form-control" id="pDeptEn" value="${escapeHtml(pd?.deptUserName_En || '')}"></div>
-            <div class="col-md-6"><label for="pDeptMr" class="form-label">विभाग वापरकर्ता (मराठी)</label><input type="text" class="form-control" id="pDeptMr" lang="mr" value="${escapeHtml(pd?.deptUserName_Mr || '')}"></div>
-            <div class="col-md-6"><label for="pRefEn" class="form-label">References (English)</label><textarea class="form-control" id="pRefEn" rows="2">${escapeHtml(pd?.references_En || '')}</textarea></div>
-            <div class="col-md-6"><label for="pRefMr" class="form-label">संदर्भ (मराठी)</label><textarea class="form-control" id="pRefMr" rows="2" lang="mr">${escapeHtml(pd?.references_Mr || '')}</textarea></div>
-            <div class="col-md-6"><label for="pAddEn" class="form-label">Additional (English)</label><textarea class="form-control" id="pAddEn" rows="2">${escapeHtml(pd?.additionalDetails_En || '')}</textarea></div>
-            <div class="col-md-6"><label for="pAddMr" class="form-label">अतिरिक्त (मराठी)</label><textarea class="form-control" id="pAddMr" rows="2" lang="mr">${escapeHtml(pd?.additionalDetails_Mr || '')}</textarea></div>
-        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>Save</button></form>`;
+            <div class="col-md-4"><label for="pFT" class="form-label">${tBilingual('prama.fundType')}</label><select class="form-select" id="pFT"><option value="">${t('common.selectOption')}</option>${fts.map(f => `<option value="${f.id}" ${pd?.fundTypeId === f.id ? 'selected' : ''}>${escapeHtml(f.name_En)}</option>`).join('')}</select></div>
+            <div class="col-md-4"><label for="pBH" class="form-label">${tBilingual('prama.budgetHead')}</label><select class="form-select" id="pBH"><option value="">${t('common.selectOption')}</option>${bhs.map(b => `<option value="${b.id}" ${pd?.budgetHeadId === b.id ? 'selected' : ''}>${escapeHtml(b.name_En)}</option>`).join('')}</select></div>
+            <div class="col-md-4"><label for="pYear" class="form-label">${tBilingual('prama.fundYear')}</label><input type="text" class="form-control" id="pYear" value="${escapeHtml(pd?.fundApprovalYear || '')}" placeholder="2025-26"></div>
+            <div class="col-12" id="prama-deptUser-container"></div>
+            <div class="col-12" id="prama-ref-container"></div>
+            <div class="col-12" id="prama-add-container"></div>
+        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>${t('prama.save')}</button></form>`;
+
+        // Create dual-lang inputs for PRAMA form
+        const dualDeptUser = createDualLangInput({ name: 'pDeptUser', label: 'Dept User', i18nKey: 'prama.deptUser', type: 'text', valueEn: pd?.deptUserName_En || '', valueMr: pd?.deptUserName_Mr || '' });
+        document.getElementById('prama-deptUser-container').appendChild(dualDeptUser);
+        const dualRef = createDualLangInput({ name: 'pRef', label: 'References', i18nKey: 'prama.references', type: 'textarea', rows: 2, valueEn: pd?.references_En || '', valueMr: pd?.references_Mr || '' });
+        document.getElementById('prama-ref-container').appendChild(dualRef);
+        const dualAdd = createDualLangInput({ name: 'pAdd', label: 'Additional Details', i18nKey: 'prama.additionalDetails', type: 'textarea', rows: 2, valueEn: pd?.additionalDetails_En || '', valueMr: pd?.additionalDetails_Mr || '' });
+        document.getElementById('prama-add-container').appendChild(dualAdd);
 
         document.getElementById('prama-form').addEventListener('submit', async e => {
             e.preventDefault();
+            const deptVals = dualDeptUser.getValues();
+            const refVals = dualRef.getValues();
+            const addVals = dualAdd.getValues();
             const body = { proposalId: pid,
                 fundTypeId: document.getElementById('pFT').value || null,
                 budgetHeadId: document.getElementById('pBH').value || null,
                 fundApprovalYear: document.getElementById('pYear').value || null,
-                deptUserName_En: document.getElementById('pDeptEn').value || null,
-                deptUserName_Mr: document.getElementById('pDeptMr').value || null,
-                references_En: document.getElementById('pRefEn').value || null,
-                references_Mr: document.getElementById('pRefMr').value || null,
-                additionalDetails_En: document.getElementById('pAddEn').value || null,
-                additionalDetails_Mr: document.getElementById('pAddMr').value || null };
+                deptUserName_En: deptVals.en || null,
+                deptUserName_Mr: deptVals.mr || null,
+                references_En: refVals.en || null,
+                references_Mr: refVals.mr || null,
+                additionalDetails_En: addVals.en || null,
+                additionalDetails_Mr: addVals.mr || null };
             const r = await api.post(`/proposals/${pid}/prama`, body);
             if (r.success) toast.success('PRAMA saved'); else toast.error(r.error || 'Failed');
         });
         return;
     }
-    if (!pd) { c.innerHTML = '<p class="text-muted">No PRAMA details yet.</p>'; return; }
+    if (!pd) { c.innerHTML = `<p class="text-muted">${t('prama.noRecord')}</p>`; return; }
 
-    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-receipt me-1"></i>PRAMA Details</h6>
+    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-receipt me-1"></i>${tBilingual('prama.title')}</h6>
         <div class="row g-3">
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Fund Type</label><div>${escapeHtml(pd.fundTypeName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Budget Head</label><div>${escapeHtml(pd.budgetHeadName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Fund Year</label><div>${escapeHtml(pd.fundApprovalYear || '—')}</div></div>
-            ${bilingualDisplay('Dept User', pd.deptUserName_En, pd.deptUserName_Mr, 'col-md-6')}
-            ${pd.references_En || pd.references_Mr ? bilingualDisplay('References', pd.references_En, pd.references_Mr) : ''}
-            ${pd.additionalDetails_En || pd.additionalDetails_Mr ? bilingualDisplay('Additional Details', pd.additionalDetails_En, pd.additionalDetails_Mr) : ''}
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('prama.fundType')}</label><div>${escapeHtml(pd.fundTypeName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('prama.budgetHead')}</label><div>${escapeHtml(pd.budgetHeadName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('prama.fundYear')}</label><div>${escapeHtml(pd.fundApprovalYear || '—')}</div></div>
+            ${bilingualDisplay('Dept User', pd.deptUserName_En, pd.deptUserName_Mr, 'col-md-6', t('prama.deptUser', 'mr'))}
+            ${pd.references_En || pd.references_Mr ? bilingualDisplay('References', pd.references_En, pd.references_Mr, 'col-12', t('prama.references', 'mr')) : ''}
+            ${pd.additionalDetails_En || pd.additionalDetails_Mr ? bilingualDisplay('Additional Details', pd.additionalDetails_En, pd.additionalDetails_Mr, 'col-12', t('prama.additionalDetails', 'mr')) : ''}
         </div>`;
 }
 
@@ -555,23 +577,26 @@ async function renderTab6(c, pid, canEdit) {
     const bhs = bhRes.success ? bhRes.data : [];
 
     if (canEdit) {
-        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-wallet2 me-1"></i>Budget & Compliance</h6>
+        c.innerHTML = `<h6 class="mb-3"><i class="bi bi-wallet2 me-1"></i>${tBilingual('budget.title')}</h6>
         <form id="budget-form"><div class="row g-3">
-            <div class="col-md-4"><label for="bWM" class="form-label">Work Execution Method</label><select class="form-select" id="bWM"><option value="">Select</option>${wms.map(w => `<option value="${w.id}" ${bd?.workExecutionMethodId === w.id ? 'selected' : ''}>${escapeHtml(w.name_En)}</option>`).join('')}</select></div>
-            <div class="col-md-4"><label for="bDays" class="form-label">Duration (Days)</label><input type="number" class="form-control" id="bDays" value="${bd?.workDurationDays || ''}"></div>
-            <div class="col-md-4"><label for="bBH" class="form-label">Budget Head</label><select class="form-select" id="bBH"><option value="">Select</option>${bhs.map(b => `<option value="${b.id}" ${bd?.budgetHeadId === b.id ? 'selected' : ''}>${escapeHtml(b.name_En)}</option>`).join('')}</select></div>
-            <div class="col-md-3"><label for="bAlloc" class="form-label">Allocated (₹)</label><input type="number" class="form-control" id="bAlloc" step="0.01" value="${bd?.allocatedFund || ''}"></div>
-            <div class="col-md-3"><label for="bAvail" class="form-label">Available (₹)</label><input type="number" class="form-control" id="bAvail" step="0.01" value="${bd?.currentAvailableFund || ''}"></div>
-            <div class="col-md-3"><label for="bOldExp" class="form-label">Old Expenditure (₹)</label><input type="number" class="form-control" id="bOldExp" step="0.01" value="${bd?.oldExpenditure || ''}"></div>
-            <div class="col-md-3"><label for="bEstCost" class="form-label">Estimated Cost (₹)</label><input type="number" class="form-control" id="bEstCost" step="0.01" value="${bd?.estimatedCost || ''}"></div>
-            <div class="col-md-4"><label for="bSerial" class="form-label">Account Serial No</label><input type="text" class="form-control" id="bSerial" value="${escapeHtml(bd?.accountSerialNo || '')}"></div>
-            <div class="col-md-4 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="bTender" ${bd?.tenderVerificationDone ? 'checked' : ''}><label class="form-check-label" for="bTender">Tender Verified</label></div></div>
-            <div class="col-md-6"><label for="bComp" class="form-label">Compliance (English)</label><textarea class="form-control" id="bComp" rows="2">${escapeHtml(bd?.complianceNotes_En || '')}</textarea></div>
-            <div class="col-md-6"><label for="bCompMr" class="form-label">अनुपालन (मराठी)</label><textarea class="form-control" id="bCompMr" rows="2" lang="mr">${escapeHtml(bd?.complianceNotes_Mr || '')}</textarea></div>
-        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>Save Budget</button></form>`;
+            <div class="col-md-4"><label for="bWM" class="form-label">${tBilingual('budget.workMethod')}</label><select class="form-select" id="bWM"><option value="">${t('common.selectOption')}</option>${wms.map(w => `<option value="${w.id}" ${bd?.workExecutionMethodId === w.id ? 'selected' : ''}>${escapeHtml(w.name_En)}</option>`).join('')}</select></div>
+            <div class="col-md-4"><label for="bDays" class="form-label">${tBilingual('budget.duration')}</label><input type="number" class="form-control" id="bDays" value="${bd?.workDurationDays || ''}"></div>
+            <div class="col-md-4"><label for="bBH" class="form-label">${tBilingual('budget.budgetHead')}</label><select class="form-select" id="bBH"><option value="">${t('common.selectOption')}</option>${bhs.map(b => `<option value="${b.id}" ${bd?.budgetHeadId === b.id ? 'selected' : ''}>${escapeHtml(b.name_En)}</option>`).join('')}</select></div>
+            <div class="col-md-3"><label for="bAlloc" class="form-label">${tBilingual('budget.allocated')}</label><input type="number" class="form-control" id="bAlloc" step="0.01" value="${bd?.allocatedFund || ''}"></div>
+            <div class="col-md-3"><label for="bAvail" class="form-label">${tBilingual('budget.available')}</label><input type="number" class="form-control" id="bAvail" step="0.01" value="${bd?.currentAvailableFund || ''}"></div>
+            <div class="col-md-3"><label for="bOldExp" class="form-label">${tBilingual('budget.oldExpenditure')}</label><input type="number" class="form-control" id="bOldExp" step="0.01" value="${bd?.oldExpenditure || ''}"></div>
+            <div class="col-md-3"><label for="bEstCost" class="form-label">${tBilingual('budget.estimatedCost')}</label><input type="number" class="form-control" id="bEstCost" step="0.01" value="${bd?.estimatedCost || ''}"></div>
+            <div class="col-md-4"><label for="bSerial" class="form-label">${tBilingual('budget.accountSerial')}</label><input type="text" class="form-control" id="bSerial" value="${escapeHtml(bd?.accountSerialNo || '')}"></div>
+            <div class="col-md-4 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="bTender" ${bd?.tenderVerificationDone ? 'checked' : ''}><label class="form-check-label" for="bTender">${tBilingual('budget.tenderVerified')}</label></div></div>
+            <div class="col-12" id="budget-compliance-container"></div>
+        </div><button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-floppy me-1"></i>${t('budget.save')}</button></form>`;
+
+        const dualCompliance = createDualLangInput({ name: 'bComp', label: 'Compliance Notes', i18nKey: 'budget.compliance', type: 'textarea', rows: 2, valueEn: bd?.complianceNotes_En || '', valueMr: bd?.complianceNotes_Mr || '' });
+        document.getElementById('budget-compliance-container').appendChild(dualCompliance);
 
         document.getElementById('budget-form').addEventListener('submit', async e => {
             e.preventDefault();
+            const compVals = dualCompliance.getValues();
             const body = { proposalId: pid,
                 workExecutionMethodId: document.getElementById('bWM').value || null,
                 workDurationDays: parseInt(document.getElementById('bDays').value) || null,
@@ -582,29 +607,29 @@ async function renderTab6(c, pid, canEdit) {
                 oldExpenditure: parseFloat(document.getElementById('bOldExp').value) || null,
                 estimatedCost: parseFloat(document.getElementById('bEstCost').value) || null,
                 accountSerialNo: document.getElementById('bSerial').value || null,
-                complianceNotes_En: document.getElementById('bComp').value || null,
-                complianceNotes_Mr: document.getElementById('bCompMr').value || null };
+                complianceNotes_En: compVals.en || null,
+                complianceNotes_Mr: compVals.mr || null };
             const r = await api.post(`/proposals/${pid}/budget`, body);
             if (r.success) { toast.success('Budget saved'); await renderTab6(c, pid, canEdit); } else toast.error(r.error || 'Failed');
         });
         return;
     }
-    if (!bd) { c.innerHTML = '<p class="text-muted">No budget details yet.</p>'; return; }
+    if (!bd) { c.innerHTML = `<p class="text-muted">${t('budget.noRecord')}</p>`; return; }
 
-    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-wallet2 me-1"></i>Budget & Compliance</h6>
+    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-wallet2 me-1"></i>${tBilingual('budget.title')}</h6>
         <div class="row g-3">
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Work Method</label><div>${escapeHtml(bd.workExecutionMethodName || '—')}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Duration</label><div>${bd.workDurationDays || '—'} days</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Budget Head</label><div>${escapeHtml(bd.budgetHeadName || '—')}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">Allocated</label><div>${formatCurrency(bd.allocatedFund)}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">Available</label><div>${formatCurrency(bd.currentAvailableFund)}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">Old Exp.</label><div>${formatCurrency(bd.oldExpenditure)}</div></div>
-            <div class="col-md-3"><label class="form-label text-muted small mb-0">Est. Cost</label><div class="fw-medium">${formatCurrency(bd.estimatedCost)}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Balance</label><div class="fw-medium ${(bd.balanceAmount || 0) < 0 ? 'text-danger' : 'text-success'}">${formatCurrency(bd.balanceAmount)}</div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Approval Slab</label><div><span class="badge bg-info">${bd.determinedApprovalSlab || '—'}</span></div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Final Authority</label><div><span class="badge bg-dark">${bd.finalAuthorityRole || '—'}</span></div></div>
-            <div class="col-md-4"><label class="form-label text-muted small mb-0">Tender Verified</label><div>${bd.tenderVerificationDone ? '<i class="bi bi-check-circle-fill text-success"></i> Yes' : '<i class="bi bi-x-circle text-danger"></i> No'}</div></div>
-            ${bd.complianceNotes_En || bd.complianceNotes_Mr ? bilingualDisplay('Compliance Notes', bd.complianceNotes_En, bd.complianceNotes_Mr) : ''}
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.workMethod')}</label><div>${escapeHtml(bd.workExecutionMethodName || '—')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.duration')}</label><div>${bd.workDurationDays || '—'} ${t('common.days')}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.budgetHead')}</label><div>${escapeHtml(bd.budgetHeadName || '—')}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('budget.allocated')}</label><div>${formatCurrency(bd.allocatedFund)}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('budget.available')}</label><div>${formatCurrency(bd.currentAvailableFund)}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('budget.oldExpenditure')}</label><div>${formatCurrency(bd.oldExpenditure)}</div></div>
+            <div class="col-md-3"><label class="form-label text-muted small mb-0">${tBilingual('budget.estimatedCost')}</label><div class="fw-medium">${formatCurrency(bd.estimatedCost)}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.balance')}</label><div class="fw-medium ${(bd.balanceAmount || 0) < 0 ? 'text-danger' : 'text-success'}">${formatCurrency(bd.balanceAmount)}</div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.approvalSlab')}</label><div><span class="badge bg-info">${bd.determinedApprovalSlab || '—'}</span></div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.finalAuthority')}</label><div><span class="badge bg-dark">${bd.finalAuthorityRole || '—'}</span></div></div>
+            <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('budget.tenderVerified')}</label><div>${bd.tenderVerificationDone ? `<i class="bi bi-check-circle-fill text-success"></i> ${t('common.yes')}` : `<i class="bi bi-x-circle text-danger"></i> ${t('common.no')}`}</div></div>
+            ${bd.complianceNotes_En || bd.complianceNotes_Mr ? bilingualDisplay('Compliance Notes', bd.complianceNotes_En, bd.complianceNotes_Mr, 'col-12', t('budget.compliance', 'mr')) : ''}
         </div>`;
 }
 
@@ -612,10 +637,10 @@ async function renderTab6(c, pid, canEdit) {
 async function renderTimeline(c, pid) {
     const res = await api.get(`/proposals/${pid}/approval-history`);
     if (!res.success || !res.data || res.data.length === 0) {
-        c.innerHTML = '<p class="text-muted text-center py-3">No approval history yet.</p>';
+        c.innerHTML = `<p class="text-muted text-center py-3">${t('timeline.noHistory')}</p>`;
         return;
     }
-    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-clock-history me-1"></i>Approval Timeline</h6>
+    c.innerHTML = `<h6 class="mb-3"><i class="bi bi-clock-history me-1"></i>${tBilingual('timeline.title')}</h6>
         <div class="timeline">${res.data.map(h => `
             <div class="timeline-item action-${h.action}">
                 <div class="d-flex justify-content-between align-items-start">
@@ -635,7 +660,7 @@ async function renderDocuments(c, pid, canEdit) {
     const docs = res.success ? (res.data || []) : [];
 
     let html = `<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="mb-0"><i class="bi bi-paperclip me-1"></i>Documents (${docs.length})</h6>
+        <h6 class="mb-0"><i class="bi bi-paperclip me-1"></i>${t('documents.title')} (${docs.length})</h6>
         ${canEdit ? `<form id="upload-form" class="d-flex gap-2 align-items-center flex-wrap">
             <select class="form-select form-select-sm" id="uploadDocType" style="width:auto;" required>
                 <option value="SupportingDoc">Supporting Doc</option><option value="LocationMap">Location Map</option>
@@ -643,7 +668,7 @@ async function renderDocuments(c, pid, canEdit) {
                 <option value="TechnicalSanctionDoc">TS Doc</option><option value="Other">Other</option>
             </select>
             <input type="file" class="form-control form-control-sm" id="uploadFile" required style="max-width:250px;">
-            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-upload me-1"></i>Upload</button>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-upload me-1"></i>${t('documents.upload')}</button>
         </form>` : ''}
     </div>`;
 
@@ -656,7 +681,7 @@ async function renderDocuments(c, pid, canEdit) {
                 </div>
             </div>`).join('')}</div>`;
     } else {
-        html += '<p class="text-muted">No documents uploaded yet.</p>';
+        html += `<p class="text-muted">${t('documents.noDocuments')}</p>`;
     }
     c.innerHTML = html;
 
@@ -675,7 +700,7 @@ async function renderDocuments(c, pid, canEdit) {
 
     c.querySelectorAll('.btn-del-doc').forEach(btn =>
         btn.addEventListener('click', async () => {
-            if (!confirm('Delete this document?')) return;
+            if (!confirm(t('documents.deleteConfirm'))) return;
             const r = await api.delete(`/proposals/${pid}/documents/${btn.dataset.id}`);
             if (r.success) { toast.success('Deleted'); await renderDocuments(c, pid, canEdit); } else toast.error(r.error || 'Failed');
         })
@@ -690,10 +715,10 @@ function wireWorkflowButtons(id, params) {
         const visits = fvRes.success ? (fvRes.data || []) : [];
         const hasCompletedWithPhotos = visits.some(fv => fv.status === 'Completed' && fv.photos?.length > 0);
         if (!hasCompletedWithPhotos) {
-            toast.error('At least one completed field visit with photos is required before submission. Go to the Field Visit tab to upload site photos.');
+            toast.error(t('fieldVisit.photoRequiredSubmit'));
             return;
         }
-        if (!confirm('Submit this proposal for approval?')) return;
+        if (!confirm(t('workflow.submitConfirm'))) return;
         const r = await api.post(`/workflow/${id}/submit`);
         if (r.success) { toast.success('Submitted'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');
     });
@@ -712,7 +737,7 @@ function wireWorkflowButtons(id, params) {
     document.getElementById('pushback-form')?.addEventListener('submit', async e => {
         e.preventDefault();
         const note = document.getElementById('pushback-note').value.trim();
-        if (!note) { toast.error('Reason is required'); return; }
+        if (!note) { toast.error(t('workflow.reasonRequired')); return; }
         const r = await api.post(`/workflow/${id}/pushback`, { proposalId: id, pushBackNote_En: note });
         bootstrap.Modal.getInstance(document.getElementById('pushbackModal'))?.hide();
         if (r.success) { toast.success('Pushed back'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');

@@ -2,6 +2,7 @@
 import { registerRoute, initRouter } from './router.js';
 import { renderLayout, clearLayout } from './layout.js';
 import { isAuthenticated } from './auth.js';
+import { initI18n } from './i18n.js';
 
 // Pages
 import { renderLoginPage } from './pages/login.js';
@@ -85,8 +86,12 @@ registerRoute('/audit', async () => {
 });
 
 // ── Initialize ──
-if (!isAuthenticated() && !window.location.hash.includes('/login')) {
-    window.location.hash = '#/login';
-}
+(async () => {
+    await initI18n();
 
-initRouter();
+    if (!isAuthenticated() && !window.location.hash.includes('/login')) {
+        window.location.hash = '#/login';
+    }
+
+    initRouter();
+})();

@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { getUser } from '../auth.js';
 import { toast } from '../toast.js';
 import { escapeHtml, formatDate } from '../utils.js';
+import { t, tBilingual, translatePage, onLangChange } from '../i18n.js';
 
 const ROLES = ['JE','TS','AE','SE','CityEngineer','AccountOfficer','DyCommissioner','Commissioner','StandingCommittee','Collector','Auditor','Lotus'];
 
@@ -12,8 +13,8 @@ export async function renderAdminUsersPage() {
 
     content.innerHTML = `
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0"><i class="bi bi-people me-2"></i>User Management</h4>
-            <button class="btn btn-primary btn-sm" id="btn-add-user"><i class="bi bi-plus me-1"></i>Add User</button>
+            <h4 class="mb-0"><i class="bi bi-people me-2"></i><span data-i18n="admin.users.title">${t('admin.users.title')}</span></h4>
+            <button class="btn btn-primary btn-sm" id="btn-add-user"><i class="bi bi-plus me-1"></i><span data-i18n="admin.users.addUser">${t('admin.users.addUser')}</span></button>
         </div>
         <div class="card">
             <div class="card-body p-0">
@@ -21,8 +22,13 @@ export async function renderAdminUsersPage() {
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Name</th><th>Mobile</th><th>Role</th>
-                                <th>Department</th><th>Active</th><th>Created</th><th style="width:120px;">Actions</th>
+                                <th data-i18n="admin.users.name">${t('admin.users.name')}</th>
+                                <th data-i18n="admin.users.mobile">${t('admin.users.mobile')}</th>
+                                <th data-i18n="admin.users.role">${t('admin.users.role')}</th>
+                                <th data-i18n="admin.users.department">${t('admin.users.department')}</th>
+                                <th data-i18n="admin.users.active">${t('admin.users.active')}</th>
+                                <th data-i18n="admin.users.created">${t('admin.users.created')}</th>
+                                <th style="width:120px;" data-i18n="admin.users.actions">${t('admin.users.actions')}</th>
                             </tr>
                         </thead>
                         <tbody id="users-tbody">
@@ -38,37 +44,40 @@ export async function renderAdminUsersPage() {
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="userModalTitle">Add User</h5>
+                        <h5 class="modal-title" id="userModalTitle">${t('admin.users.addUser')}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form id="user-form">
                         <div class="modal-body">
                             <input type="hidden" id="userId">
                             <div class="row g-3">
-                                <div class="col-md-6"><label for="uFullName" class="form-label">Full Name (English) <span class="text-danger">*</span></label><input type="text" class="form-control" id="uFullName" required></div>
-                                <div class="col-md-6"><label for="uFullNameMr" class="form-label">पूर्ण नाव (मराठी)</label><input type="text" class="form-control" id="uFullNameMr" lang="mr"></div>
-                                <div class="col-md-6"><label for="uMobile" class="form-label">Mobile <span class="text-danger">*</span></label><input type="tel" class="form-control" id="uMobile" pattern="[0-9]{10}" maxlength="10" required></div>
-                                <div class="col-md-6"><label for="uEmail" class="form-label">Email</label><input type="email" class="form-control" id="uEmail"></div>
-                                <div class="col-md-4"><label for="uRole" class="form-label">Role <span class="text-danger">*</span></label>
+                                <div class="col-md-6"><label for="uFullName" class="form-label">${t('admin.users.fullNameEn')} <span class="text-danger">*</span></label><input type="text" class="form-control" id="uFullName" required></div>
+                                <div class="col-md-6"><label for="uFullNameMr" class="form-label">${t('admin.users.fullNameMr')}</label><input type="text" class="form-control" id="uFullNameMr" lang="mr"></div>
+                                <div class="col-md-6"><label for="uMobile" class="form-label">${t('admin.users.mobile')} <span class="text-danger">*</span></label><input type="tel" class="form-control" id="uMobile" pattern="[0-9]{10}" maxlength="10" required></div>
+                                <div class="col-md-6"><label for="uEmail" class="form-label">${t('admin.users.email')}</label><input type="email" class="form-control" id="uEmail"></div>
+                                <div class="col-md-4"><label for="uRole" class="form-label">${t('admin.users.role')} <span class="text-danger">*</span></label>
                                     <select class="form-select" id="uRole" required>
-                                        <option value="">Select</option>
+                                        <option value="">${t('common.selectOption')}</option>
                                         ${ROLES.map(r => `<option value="${r}">${r}</option>`).join('')}
                                     </select>
                                 </div>
-                                <div class="col-md-4"><label for="uDept" class="form-label">Department</label>
-                                    <select class="form-select" id="uDept"><option value="">Select</option></select>
+                                <div class="col-md-4"><label for="uDept" class="form-label">${t('admin.users.department')}</label>
+                                    <select class="form-select" id="uDept"><option value="">${t('common.selectOption')}</option></select>
                                 </div>
-                                <div class="col-md-4"><label for="uDesig" class="form-label">Designation</label><input type="text" class="form-control" id="uDesig"></div>
+                                <div class="col-md-4"><label for="uDesig" class="form-label">${t('admin.users.designation')}</label><input type="text" class="form-control" id="uDesig"></div>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">${t('common.cancel')}</button>
+                            <button type="submit" class="btn btn-primary" data-i18n="common.save">${t('common.save')}</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>`;
+
+    translatePage(content);
+    onLangChange(() => translatePage(content));
 
     // Load departments for dropdown
     const deptRes = await api.get(`/masters/departments?palikaId=${user.palikaId}`);
@@ -134,7 +143,7 @@ async function loadUsers() {
 }
 
 function openUserModal(user) {
-    document.getElementById('userModalTitle').textContent = user ? 'Edit User' : 'Add User';
+    document.getElementById('userModalTitle').textContent = user ? t('admin.users.editUser') : t('admin.users.addUser');
     document.getElementById('userId').value = user?.id || '';
     document.getElementById('uFullName').value = user?.fullName_En || user?.fullName || '';
     document.getElementById('uFullNameMr').value = user?.fullName_Mr || '';
