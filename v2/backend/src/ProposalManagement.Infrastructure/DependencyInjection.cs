@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IPdfSignatureStampService, PdfSignatureStampService>();
         services.AddHttpClient<ITranslationService, GoogleTranslationService>();
 
         return services;

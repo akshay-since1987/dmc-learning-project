@@ -5,6 +5,7 @@ import { toast } from '../toast.js';
 import { stageBadge, formatDate, formatCurrency, escapeHtml } from '../utils.js';
 import { bilingualDisplay, createDualLangInput } from '../dual-lang-input.js';
 import { t, tBilingual, onLangChange, translatePage } from '../i18n.js';
+import { renderSignatureOverlay } from '../signature-overlay.js';
 
 let currentProposal = null;
 let currentTab = '1';
@@ -687,7 +688,11 @@ async function renderTab3(c, pid, canEdit) {
             <div class="col-md-4">
                 <label class="form-label text-muted small mb-1">${tBilingual('estimate.estimatePdf')}</label>
                 ${est.estimatePdfPath
-                    ? `<div><a href="${est.estimatePdfPath}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>${t('common.viewPdf')}</a></div>`
+                    ? `<div class="d-flex gap-2 align-items-center flex-wrap">
+                        <a href="${est.estimatePdfPath}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>${t('common.viewPdf')}</a>
+                        ${(est.preparedSignaturePath && (est.status === 'Draft' || est.status === 'ReturnedWithQuery')) ? `<button class="btn btn-outline-success btn-sm" id="btn-sign-pdf-prepared"><i class="bi bi-pen me-1"></i>Sign (Preparer)</button>` : ''}
+                        ${(est.approverSignaturePath && est.status === 'SentForApproval') ? `<button class="btn btn-outline-success btn-sm" id="btn-sign-pdf-approver"><i class="bi bi-pen me-1"></i>Sign (Approver)</button>` : ''}
+                       </div>`
                     : canEdit && est.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="est-pdf-upload" accept="application/pdf">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
             </div>
             <div class="col-md-4">
@@ -729,6 +734,55 @@ async function renderTab3(c, pid, canEdit) {
         const r = await api.upload(`/proposals/${pid}/estimate/${est.id}/approver-signature`, fd);
         if (r.success) { toast.success(t('estimate.signatureUploaded')); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
     });
+
+    // ── Sign PDF overlay handlers ──
+    async function openSignOverlay(signatureType) {
+        const sigPath = signatureType === 'prepared' ? est.preparedSignaturePath : est.approverSignaturePath;
+        if (!sigPath || !est.estimatePdfPath) return;
+
+        // Create overlay container
+        let overlayDiv = document.getElementById('sig-overlay-container');
+        if (!overlayDiv) {
+            overlayDiv = document.createElement('div');
+            overlayDiv.id = 'sig-overlay-container';
+            overlayDiv.className = 'mt-3 border rounded';
+            c.appendChild(overlayDiv);
+        }
+        overlayDiv.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading PDF...</div>';
+
+        try {
+            await renderSignatureOverlay(
+                overlayDiv,
+                est.estimatePdfPath,
+                sigPath,
+                async (meta) => {
+                    // On confirm — POST to sign-pdf endpoint
+                    const r = await api.post(`/proposals/${pid}/estimate/${est.id}/sign-pdf`, {
+                        signatureType,
+                        pageNumber: meta.pageNumber,
+                        positionX: meta.x,
+                        positionY: meta.y,
+                        width: meta.width,
+                        height: meta.height,
+                        rotation: meta.rotation
+                    });
+                    if (r.success) {
+                        toast.success('PDF signed successfully');
+                        overlayDiv.remove();
+                        await renderTab3(c, pid, canEdit);
+                    } else {
+                        toast.error(r.error || 'Signing failed');
+                    }
+                },
+                () => { overlayDiv.remove(); } // On cancel
+            );
+        } catch (err) {
+            overlayDiv.innerHTML = `<div class="alert alert-danger m-2">Failed to load PDF: ${escapeHtml(err.message)}</div>`;
+        }
+    }
+
+    document.getElementById('btn-sign-pdf-prepared')?.addEventListener('click', () => openSignOverlay('prepared'));
+    document.getElementById('btn-sign-pdf-approver')?.addEventListener('click', () => openSignOverlay('approver'));
 
     document.getElementById('btn-send-est')?.addEventListener('click', async () => {
         const r = await api.post(`/proposals/${pid}/estimate/${est.id}/send-for-approval`, { targetRole: 'CityEngineer' });

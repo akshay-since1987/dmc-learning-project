@@ -66,7 +66,22 @@ public class EstimatesController : BaseController
             ContentType = file.ContentType, FileContent = ms.ToArray()
         }));
     }
+
+    [HttpPost("{id:guid}/sign-pdf")]
+    public async Task<IActionResult> SignPdf(Guid proposalId, Guid id, [FromBody] SignEstimatePdfRequest request)
+        => ToActionResult(await Mediator.Send(new SignEstimatePdfCommand
+        {
+            EstimateId = id,
+            SignatureType = request.SignatureType,
+            PageNumber = request.PageNumber,
+            PositionX = request.PositionX,
+            PositionY = request.PositionY,
+            Width = request.Width,
+            Height = request.Height,
+            Rotation = request.Rotation
+        }));
 }
 
 public record SendEstimateForApprovalRequest(string TargetRole);
 public record ReturnEstimateRequest(string QueryNote_En);
+public record SignEstimatePdfRequest(string SignatureType, int PageNumber, decimal PositionX, decimal PositionY, decimal Width, decimal Height, decimal Rotation);

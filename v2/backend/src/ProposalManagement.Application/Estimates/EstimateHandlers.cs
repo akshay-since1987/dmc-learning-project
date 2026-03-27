@@ -303,3 +303,95 @@ public class UploadApproverSignatureHandler(IAppDbContext db, ICurrentUser user,
         return Result.Success();
     }
 }
+
+// ── Sign Estimate PDF (stamp signature onto PDF) ──
+public record SignEstimatePdfCommand : IRequest<Result<string>>
+{
+    public Guid EstimateId { get; init; }
+    public string SignatureType { get; init; } = default!; // "prepared" or "approver"
+    public int PageNumber { get; init; }
+    public decimal PositionX { get; init; }
+    public decimal PositionY { get; init; }
+    public decimal Width { get; init; }
+    public decimal Height { get; init; }
+    public decimal Rotation { get; init; }
+}
+
+public class SignEstimatePdfHandler(
+    IAppDbContext db,
+    ICurrentUser user,
+    IPdfSignatureStampService pdfStampService,
+    ILogger<SignEstimatePdfHandler> logger)
+    : IRequestHandler<SignEstimatePdfCommand, Result<string>>
+{
+    public async Task<Result<string>> Handle(SignEstimatePdfCommand request, CancellationToken ct)
+    {
+        var est = await db.Estimates
+            .Include(e => e.Proposal)
+            .Include(e => e.PreparedBy)
+            .Include(e => e.ApprovedBy)
+            .FirstOrDefaultAsync(e => e.Id == request.EstimateId && !e.IsDeleted, ct);
+
+        if (est is null) return Result<string>.NotFound("Estimate not found");
+
+        if (string.IsNullOrEmpty(est.EstimatePdfPath))
+            return Result<string>.Failure("No estimate PDF uploaded yet");
+
+        // Determine which signature to use
+        string? signaturePath;
+        string signerName;
+        string signerRole;
+
+        if (request.SignatureType == "prepared")
+        {
+            signaturePath = est.PreparedSignaturePath;
+            signerName = est.PreparedBy?.FullName_En ?? "Preparer";
+            signerRole = "Estimate Preparer";
+        }
+        else if (request.SignatureType == "approver")
+        {
+            signaturePath = est.ApproverSignaturePath;
+            signerName = est.ApprovedBy?.FullName_En ?? "Approver";
+            signerRole = est.SentToRole ?? "Approver";
+        }
+        else
+        {
+            return Result<string>.Failure("SignatureType must be 'prepared' or 'approver'");
+        }
+
+        if (string.IsNullOrEmpty(signaturePath))
+            return Result<string>.Failure($"No {request.SignatureType} signature image uploaded");
+
+        var outputFolder = $"uploads/estimates/{est.ProposalId}";
+        var outputFileName = $"{Guid.NewGuid():N}_signed.pdf";
+
+        var context = new SignatureStampContext(
+            SignerName: signerName,
+            SignerRole: signerRole,
+            Terms_En: "I hereby confirm the accuracy of this estimate document.",
+            Terms_Alt: "मी या अंदाजपत्रक दस्तऐवजाच्या अचूकतेची पुष्टी करतो.",
+            Note_En: null,
+            Note_Alt: null);
+
+        var signedPdfPath = await pdfStampService.StampSignatureAsync(
+            sourcePdfPath: est.EstimatePdfPath,
+            signatureImagePath: signaturePath,
+            pageNumber: request.PageNumber,
+            positionX: request.PositionX,
+            positionY: request.PositionY,
+            width: request.Width,
+            height: request.Height,
+            rotation: request.Rotation,
+            outputFolder: outputFolder,
+            outputFileName: outputFileName,
+            context: context,
+            cancellationToken: ct);
+
+        // Update estimate to point to signed PDF
+        est.EstimatePdfPath = signedPdfPath;
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Estimate PDF signed ({SignatureType}) for Estimate {EstimateId}", request.SignatureType, request.EstimateId);
+        return Result<string>.Success(signedPdfPath);
+    }
+}
