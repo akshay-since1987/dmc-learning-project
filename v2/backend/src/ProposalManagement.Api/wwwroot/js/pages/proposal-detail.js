@@ -76,7 +76,8 @@ export async function renderProposalDetailPage(params) {
             <div class="modal-dialog"><div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">${tBilingual('workflow.approveTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form id="approve-form"><div class="modal-body">
-                    <div class="mb-3"><label for="opinion" class="form-label">${tBilingual('workflow.opinion')}</label><textarea class="form-control" id="opinion" rows="3"></textarea></div>
+                    <div class="mb-3"><label for="opinion" class="form-label">${t('workflow.opinion')} (English)</label><textarea class="form-control" id="opinion" rows="2" placeholder="${t('workflow.opinionPlaceholder')}"></textarea></div>
+                    <div class="mb-3"><label for="opinion-mr" class="form-label">${t('workflow.opinion', 'mr')} (मराठी)</label><textarea class="form-control" id="opinion-mr" rows="2" lang="mr" placeholder="${t('workflow.opinionPlaceholder', 'mr')}"></textarea></div>
                     <div class="form-check"><input class="form-check-input" type="checkbox" id="disclaimer-check" required><label class="form-check-label" for="disclaimer-check">${t('workflow.disclaimer')}</label></div>
                 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-success" data-i18n="workflow.confirmApprove">Confirm Approve</button></div></form>
             </div></div>
@@ -87,7 +88,8 @@ export async function renderProposalDetailPage(params) {
             <div class="modal-dialog"><div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">${tBilingual('workflow.pushBackTitle')}</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
                 <form id="pushback-form"><div class="modal-body">
-                    <div class="mb-3"><label for="pushback-note" class="form-label">${tBilingual('workflow.reason')} <span class="text-danger">*</span></label><textarea class="form-control" id="pushback-note" rows="3" required></textarea></div>
+                    <div class="mb-3"><label for="pushback-note" class="form-label">${t('workflow.reason')} (English) <span class="text-danger">*</span></label><textarea class="form-control" id="pushback-note" rows="2" required></textarea></div>
+                    <div class="mb-3"><label for="pushback-note-mr" class="form-label">${t('workflow.reason', 'mr')} (मराठी)</label><textarea class="form-control" id="pushback-note-mr" rows="2" lang="mr"></textarea></div>
                 </div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-warning" data-i18n="workflow.confirmPushBack">Confirm Push Back</button></div></form>
             </div></div>
         </div>`;
@@ -663,7 +665,7 @@ async function renderTab3(c, pid, canEdit) {
     }
     if (!est) { c.innerHTML = `<p class="text-muted">${t('estimate.noRecord')}</p>`; return; }
 
-    const sBg = est.status === 'Approved' ? 'success' : est.status === 'SentForApproval' ? 'warning text-dark' : 'secondary';
+    const sBg = est.status === 'Approved' ? 'success' : est.status === 'SentForApproval' ? 'warning text-dark' : est.status === 'ReturnedWithQuery' ? 'danger' : 'secondary';
     c.innerHTML = `<h6 class="mb-3"><i class="bi bi-calculator me-1"></i>${tBilingual('estimate.title')}</h6>
         <div class="row g-3">
             <div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('estimate.cost')}</label><div class="fw-medium fs-5">${formatCurrency(est.estimatedCost)}</div></div>
@@ -675,18 +677,65 @@ async function renderTab3(c, pid, canEdit) {
             ${est.approverOpinion_En || est.approverOpinion_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0">${tBilingual('estimate.opinion')}</label><div>${escapeHtml(est.approverOpinion_En || '')}${est.approverOpinion_Mr ? `<br><span class="text-muted" lang="mr">${escapeHtml(est.approverOpinion_Mr)}</span>` : ''}</div></div>` : ''}
             ${est.returnQueryNote_En || est.returnQueryNote_Mr ? `<div class="col-12"><label class="form-label text-muted small mb-0 text-danger">${tBilingual('estimate.returnQuery')}</label><div class="text-danger">${escapeHtml(est.returnQueryNote_En || '')}${est.returnQueryNote_Mr ? `<br><span lang="mr">${escapeHtml(est.returnQueryNote_Mr)}</span>` : ''}</div></div>` : ''}
         </div>
+
+        <!-- File uploads section -->
+        <hr class="my-3">
+        <h6 class="mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>${t('estimate.uploads')}</h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('estimate.estimatePdf')}</label>
+                ${est.estimatePdfPath
+                    ? `<div><a href="${est.estimatePdfPath}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>${t('common.viewPdf')}</a></div>`
+                    : canEdit && est.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="est-pdf-upload" accept="application/pdf">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('estimate.preparedSignature')}</label>
+                ${est.preparedSignaturePath
+                    ? `<div><img src="${est.preparedSignaturePath}" alt="${t('estimate.preparedSignature')}" class="border rounded" style="max-height:60px;"></div>`
+                    : canEdit && est.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="est-prep-sig-upload" accept="image/png,image/jpeg,image/svg+xml">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('estimate.approverSignature')}</label>
+                ${est.approverSignaturePath
+                    ? `<div><img src="${est.approverSignaturePath}" alt="${t('estimate.approverSignature')}" class="border rounded" style="max-height:60px;"></div>`
+                    : canEdit && est.status === 'SentForApproval' ? `<input type="file" class="form-control form-control-sm" id="est-appr-sig-upload" accept="image/png,image/jpeg,image/svg+xml">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+        </div>
+
         ${canEdit && est.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-outline-primary btn-sm" id="btn-send-est"><i class="bi bi-send me-1"></i>${t('estimate.sendForApproval')}</button></div>` : ''}
         ${canEdit && est.status === 'SentForApproval' ? `<div class="mt-3">
             <button class="btn btn-success btn-sm" id="btn-approve-est"><i class="bi bi-check-lg me-1"></i>${t('estimate.approve')}</button>
             <button class="btn btn-warning btn-sm ms-2" id="btn-return-est"><i class="bi bi-arrow-return-left me-1"></i>${t('estimate.return')}</button>
         </div>` : ''}`;
 
+    // Wire upload handlers for estimate files
+    document.getElementById('est-pdf-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/estimate/${est.id}/pdf`, fd);
+        if (r.success) { toast.success(t('estimate.pdfUploaded')); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
+    document.getElementById('est-prep-sig-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/estimate/${est.id}/prepared-signature`, fd);
+        if (r.success) { toast.success(t('estimate.signatureUploaded')); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
+    document.getElementById('est-appr-sig-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/estimate/${est.id}/approver-signature`, fd);
+        if (r.success) { toast.success(t('estimate.signatureUploaded')); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
+
     document.getElementById('btn-send-est')?.addEventListener('click', async () => {
         const r = await api.post(`/proposals/${pid}/estimate/${est.id}/send-for-approval`, { targetRole: 'CityEngineer' });
         if (r.success) { toast.success('Sent for approval'); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Failed');
     });
     document.getElementById('btn-approve-est')?.addEventListener('click', async () => {
-        const r = await api.post(`/proposals/${pid}/estimate/${est.id}/approve`, { estimateId: est.id, disclaimerAccepted: true, opinion_En: '' });
+        const opinion = prompt(t('estimate.opinionPrompt'));
+        if (opinion === null) return;
+        const r = await api.post(`/proposals/${pid}/estimate/${est.id}/approve`, { estimateId: est.id, disclaimerAccepted: true, opinion_En: opinion || null });
         if (r.success) { toast.success('Estimate approved'); await renderTab3(c, pid, canEdit); } else toast.error(r.error || 'Failed');
     });
     document.getElementById('btn-return-est')?.addEventListener('click', async () => {
@@ -765,7 +814,52 @@ async function renderTab4(c, pid, canEdit) {
             ${ts.signedByName ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.signedBy')}</label><div>${escapeHtml(ts.signedByName)}</div></div>` : ''}
             ${ts.signedAt ? `<div class="col-md-4"><label class="form-label text-muted small mb-0">${tBilingual('techSanction.signedAt')}</label><div>${formatDate(ts.signedAt)}</div></div>` : ''}
         </div>
+
+        <!-- File uploads section -->
+        <hr class="my-3">
+        <h6 class="mb-2"><i class="bi bi-file-earmark-arrow-up me-1"></i>${t('techSanction.uploads')}</h6>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('techSanction.tsPdf')}</label>
+                ${ts.tsPdfPath
+                    ? `<div><a href="${ts.tsPdfPath}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>${t('common.viewPdf')}</a></div>`
+                    : canEdit && ts.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="ts-pdf-upload" accept="application/pdf">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('techSanction.outsideApprovalLetter')}</label>
+                ${ts.outsideApprovalLetterPath
+                    ? `<div><a href="${ts.outsideApprovalLetterPath}" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark me-1"></i>${t('common.viewFile')}</a></div>`
+                    : canEdit && ts.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="ts-letter-upload">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-muted small mb-1">${tBilingual('techSanction.signerSignature')}</label>
+                ${ts.signerSignaturePath
+                    ? `<div><img src="${ts.signerSignaturePath}" alt="${t('techSanction.signerSignature')}" class="border rounded" style="max-height:60px;"></div>`
+                    : canEdit && ts.status === 'Draft' ? `<input type="file" class="form-control form-control-sm" id="ts-sig-upload" accept="image/png,image/jpeg,image/svg+xml">` : `<div class="text-muted small">${t('common.notUploaded')}</div>`}
+            </div>
+        </div>
+
         ${canEdit && ts.status === 'Draft' ? `<div class="mt-3"><button class="btn btn-success btn-sm" id="btn-sign-ts"><i class="bi bi-pen me-1"></i>${t('techSanction.sign')}</button></div>` : ''}`;
+
+    // Wire upload handlers for TS files
+    document.getElementById('ts-pdf-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/technical-sanction/${ts.id}/pdf`, fd);
+        if (r.success) { toast.success(t('techSanction.pdfUploaded')); await renderTab4(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
+    document.getElementById('ts-letter-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/technical-sanction/${ts.id}/outside-approval-letter`, fd);
+        if (r.success) { toast.success(t('techSanction.letterUploaded')); await renderTab4(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
+    document.getElementById('ts-sig-upload')?.addEventListener('change', async e => {
+        const file = e.target.files[0]; if (!file) return;
+        const fd = new FormData(); fd.append('file', file);
+        const r = await api.upload(`/proposals/${pid}/technical-sanction/${ts.id}/signer-signature`, fd);
+        if (r.success) { toast.success(t('techSanction.signatureUploaded')); await renderTab4(c, pid, canEdit); } else toast.error(r.error || 'Upload failed');
+    });
 
     document.getElementById('btn-sign-ts')?.addEventListener('click', async () => {
         const r = await api.post(`/proposals/${pid}/technical-sanction/${ts.id}/sign`);
@@ -1001,6 +1095,7 @@ function wireWorkflowButtons(id, params) {
         e.preventDefault();
         const r = await api.post(`/workflow/${id}/approve`, {
             proposalId: id, opinion_En: document.getElementById('opinion').value.trim() || null,
+            opinion_Mr: document.getElementById('opinion-mr')?.value.trim() || null,
             disclaimerAccepted: document.getElementById('disclaimer-check').checked });
         bootstrap.Modal.getInstance(document.getElementById('approveModal'))?.hide();
         if (r.success) { toast.success('Approved'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');
@@ -1011,7 +1106,9 @@ function wireWorkflowButtons(id, params) {
         e.preventDefault();
         const note = document.getElementById('pushback-note').value.trim();
         if (!note) { toast.error(t('workflow.reasonRequired')); return; }
-        const r = await api.post(`/workflow/${id}/pushback`, { proposalId: id, pushBackNote_En: note });
+        const r = await api.post(`/workflow/${id}/pushback`, {
+            proposalId: id, pushBackNote_En: note,
+            pushBackNote_Mr: document.getElementById('pushback-note-mr')?.value.trim() || null });
         bootstrap.Modal.getInstance(document.getElementById('pushbackModal'))?.hide();
         if (r.success) { toast.success('Pushed back'); renderProposalDetailPage(params); } else toast.error(r.error || 'Failed');
     });

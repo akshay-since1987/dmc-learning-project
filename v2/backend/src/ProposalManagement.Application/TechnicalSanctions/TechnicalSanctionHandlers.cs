@@ -142,3 +142,141 @@ public class SignTechnicalSanctionHandler(IAppDbContext db, ICurrentUser user) :
         return Result.Success();
     }
 }
+
+// ── Upload TS PDF ──
+public record UploadTsPdfCommand : IRequest<Result>
+{
+    public Guid TsId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadTsPdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadTsPdfHandler> logger)
+    : IRequestHandler<UploadTsPdfCommand, Result>
+{
+    private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
+
+    public async Task<Result> Handle(UploadTsPdfCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxPdfSize) return Result.Failure("PDF size exceeds 10 MB limit");
+        if (!string.Equals(request.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            return Result.Failure("Only PDF files are allowed");
+
+        var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
+        if (ts is null) return Result.NotFound("Technical sanction not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(ts.TsPdfPath))
+        {
+            var oldFile = Path.Combine("wwwroot", ts.TsPdfPath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var safeFileName = Path.GetFileName(request.FileName);
+        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        ts.TsPdfPath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("TS PDF {FileName} uploaded for TechnicalSanction {TsId}", safeFileName, request.TsId);
+        return Result.Success();
+    }
+}
+
+// ── Upload Outside Approval Letter ──
+public record UploadOutsideApprovalLetterCommand : IRequest<Result>
+{
+    public Guid TsId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadOutsideApprovalLetterHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadOutsideApprovalLetterHandler> logger)
+    : IRequestHandler<UploadOutsideApprovalLetterCommand, Result>
+{
+    private const long MaxSize = 10 * 1024 * 1024; // 10 MB
+
+    public async Task<Result> Handle(UploadOutsideApprovalLetterCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result.Failure("File size exceeds 10 MB limit");
+
+        var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
+        if (ts is null) return Result.NotFound("Technical sanction not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(ts.OutsideApprovalLetterPath))
+        {
+            var oldFile = Path.Combine("wwwroot", ts.OutsideApprovalLetterPath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var safeFileName = Path.GetFileName(request.FileName);
+        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        ts.OutsideApprovalLetterPath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Outside approval letter {FileName} uploaded for TechnicalSanction {TsId}", safeFileName, request.TsId);
+        return Result.Success();
+    }
+}
+
+// ── Upload Signer Signature ──
+public record UploadSignerSignatureCommand : IRequest<Result>
+{
+    public Guid TsId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadSignerSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadSignerSignatureHandler> logger)
+    : IRequestHandler<UploadSignerSignatureCommand, Result>
+{
+    private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
+    private const long MaxSize = 2 * 1024 * 1024; // 2 MB
+
+    public async Task<Result> Handle(UploadSignerSignatureCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result.Failure("Signature file exceeds 2 MB limit");
+        if (!AllowedTypes.Contains(request.ContentType)) return Result.Failure("Signature must be PNG, JPEG, or SVG");
+
+        var ts = await db.TechnicalSanctions.Include(t => t.Proposal).FirstOrDefaultAsync(t => t.Id == request.TsId, ct);
+        if (ts is null) return Result.NotFound("Technical sanction not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "technical-sanctions", ts.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(ts.SignerSignaturePath))
+        {
+            var oldFile = Path.Combine("wwwroot", ts.SignerSignaturePath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var storageName = $"{Guid.NewGuid():N}_signer_signature.png";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        ts.SignerSignaturePath = $"/uploads/technical-sanctions/{ts.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Signer signature uploaded for TechnicalSanction {TsId}", request.TsId);
+        return Result.Success();
+    }
+}

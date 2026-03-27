@@ -163,3 +163,143 @@ public class ReturnEstimateHandler(IAppDbContext db, ICurrentUser user) : IReque
         return Result.Success();
     }
 }
+
+// ── Upload Estimate PDF ──
+public record UploadEstimatePdfCommand : IRequest<Result>
+{
+    public Guid EstimateId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadEstimatePdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadEstimatePdfHandler> logger)
+    : IRequestHandler<UploadEstimatePdfCommand, Result>
+{
+    private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
+
+    public async Task<Result> Handle(UploadEstimatePdfCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxPdfSize) return Result.Failure("PDF size exceeds 10 MB limit");
+        if (!string.Equals(request.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            return Result.Failure("Only PDF files are allowed");
+
+        var est = await db.Estimates.Include(e => e.Proposal).FirstOrDefaultAsync(e => e.Id == request.EstimateId, ct);
+        if (est is null) return Result.NotFound("Estimate not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(est.EstimatePdfPath))
+        {
+            var oldFile = Path.Combine("wwwroot", est.EstimatePdfPath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var safeFileName = Path.GetFileName(request.FileName);
+        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        est.EstimatePdfPath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Estimate PDF {FileName} uploaded for Estimate {EstimateId}", safeFileName, request.EstimateId);
+        return Result.Success();
+    }
+}
+
+// ── Upload Prepared-By Signature ──
+public record UploadPreparedSignatureCommand : IRequest<Result>
+{
+    public Guid EstimateId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadPreparedSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadPreparedSignatureHandler> logger)
+    : IRequestHandler<UploadPreparedSignatureCommand, Result>
+{
+    private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
+    private const long MaxSize = 2 * 1024 * 1024; // 2 MB
+
+    public async Task<Result> Handle(UploadPreparedSignatureCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result.Failure("Signature file exceeds 2 MB limit");
+        if (!AllowedTypes.Contains(request.ContentType)) return Result.Failure("Signature must be PNG, JPEG, or SVG");
+
+        var est = await db.Estimates.Include(e => e.Proposal).FirstOrDefaultAsync(e => e.Id == request.EstimateId, ct);
+        if (est is null) return Result.NotFound("Estimate not found");
+
+        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(est.PreparedSignaturePath))
+        {
+            var oldFile = Path.Combine("wwwroot", est.PreparedSignaturePath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var storageName = $"{Guid.NewGuid():N}_prepared_signature.png";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        est.PreparedSignaturePath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Prepared signature uploaded for Estimate {EstimateId}", request.EstimateId);
+        return Result.Success();
+    }
+}
+
+// ── Upload Approver Signature ──
+public record UploadApproverSignatureCommand : IRequest<Result>
+{
+    public Guid EstimateId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadApproverSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadApproverSignatureHandler> logger)
+    : IRequestHandler<UploadApproverSignatureCommand, Result>
+{
+    private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/svg+xml" };
+    private const long MaxSize = 2 * 1024 * 1024; // 2 MB
+
+    public async Task<Result> Handle(UploadApproverSignatureCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result.Failure("Signature file exceeds 2 MB limit");
+        if (!AllowedTypes.Contains(request.ContentType)) return Result.Failure("Signature must be PNG, JPEG, or SVG");
+
+        var est = await db.Estimates.Include(e => e.Proposal).FirstOrDefaultAsync(e => e.Id == request.EstimateId, ct);
+        if (est is null) return Result.NotFound("Estimate not found");
+        if (est.SentToId != user.UserId) return Result.Forbidden("Only the designated approver can upload signature");
+
+        var folder = Path.Combine("wwwroot", "uploads", "estimates", est.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        if (!string.IsNullOrEmpty(est.ApproverSignaturePath))
+        {
+            var oldFile = Path.Combine("wwwroot", est.ApproverSignaturePath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var storageName = $"{Guid.NewGuid():N}_approver_signature.png";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        est.ApproverSignaturePath = $"/uploads/estimates/{est.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Approver signature uploaded for Estimate {EstimateId}", request.EstimateId);
+        return Result.Success();
+    }
+}

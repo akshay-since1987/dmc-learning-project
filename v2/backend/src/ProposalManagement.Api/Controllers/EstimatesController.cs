@@ -27,6 +27,45 @@ public class EstimatesController : BaseController
     [HttpPost("{id:guid}/return")]
     public async Task<IActionResult> Return(Guid proposalId, Guid id, [FromBody] ReturnEstimateRequest request)
         => ToActionResult(await Mediator.Send(new ReturnEstimateCommand(id, request.QueryNote_En)));
+
+    [HttpPost("{id:guid}/pdf")]
+    public async Task<IActionResult> UploadPdf(Guid proposalId, Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        return ToActionResult(await Mediator.Send(new UploadEstimatePdfCommand
+        {
+            EstimateId = id, FileName = file.FileName, FileSize = file.Length,
+            ContentType = file.ContentType, FileContent = ms.ToArray()
+        }));
+    }
+
+    [HttpPost("{id:guid}/prepared-signature")]
+    public async Task<IActionResult> UploadPreparedSignature(Guid proposalId, Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        return ToActionResult(await Mediator.Send(new UploadPreparedSignatureCommand
+        {
+            EstimateId = id, FileName = file.FileName, FileSize = file.Length,
+            ContentType = file.ContentType, FileContent = ms.ToArray()
+        }));
+    }
+
+    [HttpPost("{id:guid}/approver-signature")]
+    public async Task<IActionResult> UploadApproverSignature(Guid proposalId, Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+        return ToActionResult(await Mediator.Send(new UploadApproverSignatureCommand
+        {
+            EstimateId = id, FileName = file.FileName, FileSize = file.Length,
+            ContentType = file.ContentType, FileContent = ms.ToArray()
+        }));
+    }
 }
 
 public record SendEstimateForApprovalRequest(string TargetRole);
