@@ -17,6 +17,7 @@ public record FieldVisitDto
     public string? AssignedToName { get; init; }
     public string? InspectionByName { get; init; }
     public DateTime? InspectionDate { get; init; }
+    public Guid? SiteConditionId { get; init; }
     public string? SiteConditionName { get; init; }
     public string? ProblemDescription_En { get; init; }
     public string? ProblemDescription_Mr { get; init; }
@@ -64,6 +65,7 @@ public class GetFieldVisitsHandler(IAppDbContext db, ICurrentUser user) : IReque
                 AssignedToName = fv.AssignedTo.FullName_En,
                 InspectionByName = fv.InspectionBy != null ? fv.InspectionBy.FullName_En : null,
                 InspectionDate = fv.InspectionDate,
+                SiteConditionId = fv.SiteConditionId,
                 SiteConditionName = fv.SiteCondition != null ? fv.SiteCondition.Name_En : null,
                 ProblemDescription_En = fv.ProblemDescription_En,
                 ProblemDescription_Mr = fv.ProblemDescription_Mr,
@@ -156,6 +158,7 @@ public record UpdateFieldVisitCommand : IRequest<Result>
 {
     public Guid Id { get; init; }
     public Guid? SiteConditionId { get; init; }
+    public DateTime? InspectionDate { get; init; }
     public string? ProblemDescription_En { get; init; }
     public string? ProblemDescription_Mr { get; init; }
     public string? Measurements_En { get; init; }
@@ -177,6 +180,7 @@ public class UpdateFieldVisitHandler(IAppDbContext db, ICurrentUser user) : IReq
         if (fv.AssignedToId != user.UserId) return Result.Forbidden("Only assigned user can update");
 
         fv.SiteConditionId = request.SiteConditionId;
+        fv.InspectionDate = request.InspectionDate ?? DateTime.UtcNow;
         fv.ProblemDescription_En = request.ProblemDescription_En;
         fv.ProblemDescription_Mr = request.ProblemDescription_Mr;
         fv.Measurements_En = request.Measurements_En;
@@ -301,6 +305,108 @@ public class DeleteFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user)
 
         db.FieldVisitPhotos.Remove(photo);
         await db.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}
+
+// ── Upload PDF ──
+public record UploadFieldVisitPdfCommand : IRequest<Result>
+{
+    public Guid FieldVisitId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadFieldVisitPdfHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitPdfHandler> logger)
+    : IRequestHandler<UploadFieldVisitPdfCommand, Result>
+{
+    private const long MaxPdfSize = 10 * 1024 * 1024; // 10 MB
+
+    public async Task<Result> Handle(UploadFieldVisitPdfCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxPdfSize) return Result.Failure("PDF size exceeds 10 MB limit");
+        if (!string.Equals(request.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            return Result.Failure("Only PDF files are allowed");
+
+        var fv = await db.FieldVisits.FindAsync(new object[] { request.FieldVisitId }, ct);
+        if (fv is null) return Result.NotFound("Field visit not found");
+        if (fv.Status == nameof(FieldVisitStatus.Completed)) return Result.Failure("Cannot upload to a completed field visit");
+        if (fv.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can upload PDF");
+
+        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        // Delete previous PDF if exists
+        if (!string.IsNullOrEmpty(fv.UploadedPdfPath))
+        {
+            var oldFile = Path.Combine("wwwroot", fv.UploadedPdfPath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var safeFileName = Path.GetFileName(request.FileName);
+        var storageName = $"{Guid.NewGuid():N}_{safeFileName}";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        fv.UploadedPdfPath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("PDF {FileName} uploaded for FieldVisit {FieldVisitId}", safeFileName, request.FieldVisitId);
+        return Result.Success();
+    }
+}
+
+// ── Upload Signature ──
+public record UploadFieldVisitSignatureCommand : IRequest<Result>
+{
+    public Guid FieldVisitId { get; init; }
+    public string FileName { get; init; } = default!;
+    public long FileSize { get; init; }
+    public string ContentType { get; init; } = default!;
+    public byte[] FileContent { get; init; } = default!;
+}
+
+public class UploadFieldVisitSignatureHandler(IAppDbContext db, ICurrentUser user, ILogger<UploadFieldVisitSignatureHandler> logger)
+    : IRequestHandler<UploadFieldVisitSignatureCommand, Result>
+{
+    private static readonly HashSet<string> AllowedTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/png", "image/jpeg", "image/svg+xml"
+    };
+    private const long MaxSize = 2 * 1024 * 1024; // 2 MB
+
+    public async Task<Result> Handle(UploadFieldVisitSignatureCommand request, CancellationToken ct)
+    {
+        if (request.FileSize > MaxSize) return Result.Failure("Signature file exceeds 2 MB limit");
+        if (!AllowedTypes.Contains(request.ContentType)) return Result.Failure("Signature must be PNG, JPEG, or SVG");
+
+        var fv = await db.FieldVisits.FindAsync(new object[] { request.FieldVisitId }, ct);
+        if (fv is null) return Result.NotFound("Field visit not found");
+        if (fv.Status == nameof(FieldVisitStatus.Completed)) return Result.Failure("Cannot sign a completed field visit");
+        if (fv.AssignedToId != user.UserId) return Result.Forbidden("Only assigned engineer can sign");
+
+        var folder = Path.Combine("wwwroot", "uploads", "field-visits", fv.ProposalId.ToString());
+        Directory.CreateDirectory(folder);
+
+        // Delete previous signature if exists
+        if (!string.IsNullOrEmpty(fv.SignaturePath))
+        {
+            var oldFile = Path.Combine("wwwroot", fv.SignaturePath.TrimStart('/'));
+            if (File.Exists(oldFile)) File.Delete(oldFile);
+        }
+
+        var storageName = $"{Guid.NewGuid():N}_signature.png";
+        var storagePath = Path.Combine(folder, storageName);
+
+        await File.WriteAllBytesAsync(storagePath, request.FileContent, ct);
+
+        fv.SignaturePath = $"/uploads/field-visits/{fv.ProposalId}/{storageName}";
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Signature uploaded for FieldVisit {FieldVisitId}", request.FieldVisitId);
         return Result.Success();
     }
 }

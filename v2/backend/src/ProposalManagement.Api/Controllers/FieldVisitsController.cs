@@ -55,6 +55,44 @@ public class FieldVisitsController : BaseController
     [HttpDelete("{id:guid}/photos/{photoId:guid}")]
     public async Task<IActionResult> DeletePhoto(Guid proposalId, Guid id, Guid photoId)
         => ToActionResult(await Mediator.Send(new DeleteFieldVisitPhotoCommand(photoId)));
+
+    [HttpPost("{id:guid}/pdf")]
+    public async Task<IActionResult> UploadPdf(Guid proposalId, Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+
+        var command = new UploadFieldVisitPdfCommand
+        {
+            FieldVisitId = id,
+            FileName = file.FileName,
+            FileSize = file.Length,
+            ContentType = file.ContentType,
+            FileContent = ms.ToArray()
+        };
+        return ToActionResult(await Mediator.Send(command));
+    }
+
+    [HttpPost("{id:guid}/signature")]
+    public async Task<IActionResult> UploadSignature(Guid proposalId, Guid id, [FromForm] IFormFile file)
+    {
+        if (file.Length == 0) return BadRequest(new { success = false, error = "File is empty" });
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms);
+
+        var command = new UploadFieldVisitSignatureCommand
+        {
+            FieldVisitId = id,
+            FileName = file.FileName,
+            FileSize = file.Length,
+            ContentType = file.ContentType,
+            FileContent = ms.ToArray()
+        };
+        return ToActionResult(await Mediator.Send(command));
+    }
 }
 
 public record AssignFieldVisitRequest(Guid AssignedToId);

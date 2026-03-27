@@ -159,6 +159,13 @@ async function renderTab2(c, pid, canEdit) {
     const totalPhotos = visits.reduce((sum, fv) => sum + (fv.photos?.length || 0), 0);
     const hasCompleted = visits.some(fv => fv.status === 'Completed' && fv.photos?.length > 0);
 
+    // Load site conditions for dropdown
+    let siteConditions = [];
+    const scRes = await api.get('/masters/site-conditions');
+    if (scRes.success && scRes.data) siteConditions = scRes.data;
+
+    const user = getUser();
+
     let html = `<div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0"><i class="bi bi-geo-alt me-1"></i>${t('fieldVisit.title')} (${visits.length})</h6>
         ${canEdit ? `<button class="btn btn-primary btn-sm" id="btn-assign-fv"><i class="bi bi-plus me-1"></i>${t('fieldVisit.assignVisit')}</button>` : ''}
@@ -182,11 +189,11 @@ async function renderTab2(c, pid, canEdit) {
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
-            const canUpload = canEdit && fv.status !== 'Completed';
-            const canModifyVisit = canEdit && fv.status !== 'Completed';
+            const isCompleted = fv.status === 'Completed';
+            const canModify = canEdit && !isCompleted;
             const photoCount = fv.photos?.length || 0;
 
-            html += `<div class="card mb-3 ${fv.status === 'Completed' ? 'border-success' : ''}">
+            html += `<div class="card mb-3 ${isCompleted ? 'border-success' : ''}">
                 <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
                     <div>
                         <strong>${t('fieldVisit.visit')} #${fv.visitNumber}</strong>
@@ -195,36 +202,93 @@ async function renderTab2(c, pid, canEdit) {
                     </div>
                     <small class="text-muted">${formatDate(fv.createdAt)}</small>
                 </div>
-                <div class="card-body py-3">
-                    ${fv.siteConditionName ? `<div class="small mb-1">${t('fieldVisit.siteCondition')}: <strong>${escapeHtml(fv.siteConditionName)}</strong></div>` : ''}
-                    ${fv.problemDescription_En || fv.problemDescription_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.problem')}:</strong> ${escapeHtml(fv.problemDescription_En || '')}${fv.problemDescription_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.problemDescription_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.measurements_En || fv.measurements_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.measurements')}:</strong> ${escapeHtml(fv.measurements_En || '')}${fv.measurements_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.measurements_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.remark_En || fv.remark_Mr ? `<div class="small mb-1"><strong>${t('fieldVisit.remark')}:</strong> ${escapeHtml(fv.remark_En || '')}${fv.remark_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.remark_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.recommendation_En || fv.recommendation_Mr ? `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i>${t('fieldVisit.recommendation')}: ${escapeHtml(fv.recommendation_En || '')}${fv.recommendation_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.recommendation_Mr)}</span>` : ''}</div>` : ''}
-                    ${fv.gpsLatitude ? `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>` : ''}
-                    ${fv.completedAt ? `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.completed')}: ${formatDate(fv.completedAt)}</div>` : ''}
+                <div class="card-body py-3">`;
 
-                    <!-- ── Site Photos Section (always visible per visit) ── -->
-                    <div class="border rounded p-3 mt-2" style="background:#f8f9fa;">
+            // ── EDITABLE FORM (for non-completed visits when user can modify) ──
+            if (canModify) {
+                html += `<form class="fv-edit-form" data-fv-id="${fv.id}">
+
+                    <!-- Inspection Detail Section -->
+                    <h6 class="fw-bold text-primary border-bottom pb-1 mb-3"><i class="bi bi-clipboard-check me-1"></i>${t('fieldVisit.inspectionDetail')}</h6>
+
+                    <!-- Upload PDF -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">${t('fieldVisit.uploadPdf')}</label>
+                        ${fv.uploadedPdfPath ? `
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <a href="${fv.uploadedPdfPath}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-pdf me-1"></i>${t('fieldVisit.viewPdf')}</a>
+                                <span class="text-muted small">${t('fieldVisit.pdfUploaded')}</span>
+                            </div>` : ''}
+                        <input type="file" class="form-control form-control-sm fv-pdf-input" data-fv-id="${fv.id}" accept="application/pdf">
+                        <div class="form-text">${t('fieldVisit.pdfHint')}</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- Inspection By (auto-filled) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">${t('fieldVisit.inspectionBy')}</label>
+                            <input type="text" class="form-control form-control-sm bg-light" value="${escapeHtml(fv.inspectionByName || user?.fullName_En || '')}" readonly aria-label="Inspection by">
+                            <div class="form-text">${t('fieldVisit.inspectionByHint')}</div>
+                        </div>
+                        <!-- Inspection Date -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">${t('fieldVisit.inspectionDate')}</label>
+                            <input type="date" class="form-control form-control-sm fv-inspection-date" data-fv-id="${fv.id}"
+                                value="${fv.inspectionDate ? fv.inspectionDate.substring(0,10) : new Date().toISOString().substring(0,10)}" aria-label="Inspection date">
+                        </div>
+                    </div>
+
+                    <!-- Site Condition (dropdown from master) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">${t('fieldVisit.siteCondition')}</label>
+                        <select class="form-select form-select-sm fv-site-condition" data-fv-id="${fv.id}" aria-label="Site condition">
+                            <option value="">— ${t('fieldVisit.selectSiteCondition')} —</option>
+                            ${siteConditions.map(sc => `<option value="${sc.id}" ${fv.siteConditionId === sc.id ? 'selected' : ''}>${escapeHtml(sc.name_En)}${sc.name_Mr ? ' / ' + escapeHtml(sc.name_Mr) : ''}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <!-- Problem Description (dual-lang textarea) -->
+                    <div class="mb-3" id="fv-problem-${fv.id}"></div>
+
+                    <!-- Measurements (optional, dual-lang textarea) -->
+                    <div class="mb-3" id="fv-measurements-${fv.id}"></div>
+
+                    <!-- GPS Location -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium"><i class="bi bi-geo-alt me-1"></i>${t('fieldVisit.gpsLat')}</label>
+                            <input type="number" step="0.000001" class="form-control form-control-sm fv-gps-lat" data-fv-id="${fv.id}"
+                                value="${fv.gpsLatitude || ''}" placeholder="e.g. 20.9010" aria-label="GPS Latitude">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">${t('fieldVisit.gpsLong')}</label>
+                            <input type="number" step="0.000001" class="form-control form-control-sm fv-gps-long" data-fv-id="${fv.id}"
+                                value="${fv.gpsLongitude || ''}" placeholder="e.g. 74.7749" aria-label="GPS Longitude">
+                        </div>
+                    </div>
+
+                    <!-- Remark (dual-lang) -->
+                    <div class="mb-3" id="fv-remark-${fv.id}"></div>
+
+                    <!-- Site Photos Section -->
+                    <div class="border rounded p-3 mb-3" style="background:#f8f9fa;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h6 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>${t('fieldVisit.sitePhotos')}
                                 <span class="badge ${photoCount > 0 ? 'bg-primary' : 'bg-danger'} ms-1">${photoCount}</span>
                             </h6>
-                            ${canUpload ? `<label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
+                            <label class="btn btn-primary btn-sm mb-0" role="button" tabindex="0">
                                 <i class="bi bi-camera-fill me-1"></i>${t('fieldVisit.uploadPhotos')}
                                 <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
-                            </label>` : ''}
+                            </label>
                         </div>
 
-                        ${photoCount === 0 && canUpload ? `
+                        ${photoCount === 0 ? `
                             <div class="text-center py-4 border border-2 border-dashed rounded bg-white fv-drop-zone" data-id="${fv.id}" style="cursor:pointer;">
                                 <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
                                 <p class="text-muted mb-1 fw-medium">${t('fieldVisit.dragDrop')}</p>
                                 <p class="text-muted small mb-0">${t('fieldVisit.dragDropHint')} · JPEG, PNG, WebP · max 5 MB each</p>
-                                ${fv.status !== 'Completed' ? `<p class="text-danger small mt-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>${t('fieldVisit.photosMandatory')}</p>` : ''}
+                                <p class="text-danger small mt-2 mb-0"><i class="bi bi-exclamation-circle me-1"></i>${t('fieldVisit.photosMandatory')}</p>
                             </div>` : ''}
-
-                        ${photoCount === 0 && !canUpload ? `<p class="text-muted small mb-0">${t('fieldVisit.noPhotos')}</p>` : ''}
 
                         ${photoCount > 0 ? `
                             <div class="d-flex flex-wrap gap-2">
@@ -233,27 +297,93 @@ async function renderTab2(c, pid, canEdit) {
                                         <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}"
                                             class="w-100 h-100" style="object-fit:cover;cursor:pointer;"
                                             onclick="window.open(this.src,'_blank')" title="Click to view full size">
-                                        ${canUpload ? `<button class="btn btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo rounded-0"
+                                        <button class="btn btn-danger position-absolute top-0 end-0 p-0 lh-1 btn-del-photo rounded-0"
                                             data-fv-id="${fv.id}" data-photo-id="${p.id}" style="width:22px;height:22px;font-size:11px;opacity:0.85;" title="Delete photo">
-                                            <i class="bi bi-x-lg"></i></button>` : ''}
+                                            <i class="bi bi-x-lg"></i></button>
                                     </div>`).join('')}
-                                ${canUpload ? `
-                                    <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white shadow-sm fv-drop-zone"  
-                                        data-id="${fv.id}" style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
-                                        <div class="text-center text-muted">
-                                            <i class="bi bi-plus-lg fs-4"></i><br><small>${t('fieldVisit.addMore')}</small>
-                                        </div>
-                                        <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
-                                    </label>` : ''}
+                                <label class="border border-2 border-dashed rounded d-flex align-items-center justify-content-center bg-white shadow-sm fv-drop-zone"  
+                                    data-id="${fv.id}" style="width:110px;height:110px;cursor:pointer;" role="button" tabindex="0" title="Add more photos">
+                                    <div class="text-center text-muted">
+                                        <i class="bi bi-plus-lg fs-4"></i><br><small>${t('fieldVisit.addMore')}</small>
+                                    </div>
+                                    <input type="file" class="d-none fv-photo-input" data-id="${fv.id}" accept="image/*" multiple>
+                                </label>
                             </div>` : ''}
                     </div>
 
-                    ${canModifyVisit && !fv.completedAt ? `
-                        <div class="mt-3">
-                            <button class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.markComplete')}</button>
+                    <!-- Recommendation (dual-lang) -->
+                    <div class="mb-3" id="fv-recommendation-${fv.id}"></div>
+
+                    <!-- Signature -->
+                    <div class="mb-3">
+                        <label class="form-label fw-medium"><i class="bi bi-pen me-1"></i>${t('fieldVisit.signature')}</label>
+                        ${fv.signaturePath ? `
+                            <div class="mb-2">
+                                <img src="${fv.signaturePath}" alt="Signature" class="border rounded" style="max-height:60px;">
+                            </div>` : ''}
+                        <input type="file" class="form-control form-control-sm fv-signature-input" data-fv-id="${fv.id}" accept="image/png,image/jpeg">
+                        <div class="form-text">${t('fieldVisit.signatureHint')}</div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-floppy me-1"></i>${t('fieldVisit.saveVisit')}</button>
+                        <button type="button" class="btn btn-success btn-sm btn-complete-fv" data-id="${fv.id}"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.signAndComplete')}</button>
+                    </div>
+                </form>`;
+
+            } else {
+                // ── READ-ONLY VIEW (completed visits or user can't edit) ──
+                if (fv.uploadedPdfPath) {
+                    html += `<div class="small mb-2"><i class="bi bi-file-pdf text-danger me-1"></i><a href="${fv.uploadedPdfPath}" target="_blank">${t('fieldVisit.viewPdf')}</a></div>`;
+                }
+                if (fv.inspectionByName || fv.inspectionDate) {
+                    html += `<div class="small mb-1"><strong>${t('fieldVisit.inspectionBy')}:</strong> ${escapeHtml(fv.inspectionByName || '—')} <span class="text-muted ms-2">${t('fieldVisit.inspectionDate')}: ${fv.inspectionDate ? formatDate(fv.inspectionDate) : '—'}</span></div>`;
+                }
+                if (fv.siteConditionName) {
+                    html += `<div class="small mb-1"><strong>${t('fieldVisit.siteCondition')}:</strong> ${escapeHtml(fv.siteConditionName)}</div>`;
+                }
+                if (fv.problemDescription_En || fv.problemDescription_Mr) {
+                    html += `<div class="small mb-1"><strong>${t('fieldVisit.problem')}:</strong> ${escapeHtml(fv.problemDescription_En || '')}${fv.problemDescription_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.problemDescription_Mr)}</span>` : ''}</div>`;
+                }
+                if (fv.measurements_En || fv.measurements_Mr) {
+                    html += `<div class="small mb-1"><strong>${t('fieldVisit.measurements')}:</strong> ${escapeHtml(fv.measurements_En || '')}${fv.measurements_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.measurements_Mr)}</span>` : ''}</div>`;
+                }
+                if (fv.gpsLatitude) {
+                    html += `<div class="small mb-2 text-muted"><i class="bi bi-geo-alt me-1"></i>${fv.gpsLatitude}, ${fv.gpsLongitude}</div>`;
+                }
+                if (fv.remark_En || fv.remark_Mr) {
+                    html += `<div class="small mb-1"><strong>${t('fieldVisit.remark')}:</strong> ${escapeHtml(fv.remark_En || '')}${fv.remark_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.remark_Mr)}</span>` : ''}</div>`;
+                }
+                if (fv.recommendation_En || fv.recommendation_Mr) {
+                    html += `<div class="small mb-1 text-success"><i class="bi bi-chat-right-text me-1"></i><strong>${t('fieldVisit.recommendation')}:</strong> ${escapeHtml(fv.recommendation_En || '')}${fv.recommendation_Mr ? ` <span class="text-muted" lang="mr">| ${escapeHtml(fv.recommendation_Mr)}</span>` : ''}</div>`;
+                }
+                if (fv.signaturePath) {
+                    html += `<div class="small mb-2"><strong>${t('fieldVisit.signature')}:</strong> <img src="${fv.signaturePath}" alt="Signature" class="border rounded ms-2" style="max-height:40px;"></div>`;
+                }
+                if (fv.completedAt) {
+                    html += `<div class="small text-success mb-2"><i class="bi bi-check-circle me-1"></i>${t('fieldVisit.completed')}: ${formatDate(fv.completedAt)}</div>`;
+                }
+
+                // Read-only photo gallery
+                html += `<div class="border rounded p-3 mt-2" style="background:#f8f9fa;">
+                    <h6 class="mb-2 fw-bold"><i class="bi bi-images me-2 text-primary"></i>${t('fieldVisit.sitePhotos')}
+                        <span class="badge ${photoCount > 0 ? 'bg-primary' : 'bg-secondary'} ms-1">${photoCount}</span>
+                    </h6>
+                    ${photoCount === 0 ? `<p class="text-muted small mb-0">${t('fieldVisit.noPhotos')}</p>` : ''}
+                    ${photoCount > 0 ? `
+                        <div class="d-flex flex-wrap gap-2">
+                            ${fv.photos.map(p => `
+                                <div class="position-relative border rounded overflow-hidden shadow-sm" style="width:110px;height:110px;">
+                                    <img src="${p.storagePath || p.fileName}" alt="${escapeHtml(p.caption || p.fileName)}"
+                                        class="w-100 h-100" style="object-fit:cover;cursor:pointer;"
+                                        onclick="window.open(this.src,'_blank')" title="Click to view full size">
+                                </div>`).join('')}
                         </div>` : ''}
-                </div>
-            </div>`;
+                </div>`;
+            }
+
+            html += `</div></div>`;
         });
     }
 
@@ -281,7 +411,116 @@ async function renderTab2(c, pid, canEdit) {
 
     c.innerHTML = html;
 
-    // Wire: Assign Visit button → open modal and load engineers
+    // ── Create dual-lang inputs for editable visits ──
+    const dualInputs = {}; // { fvId: { problem, measurements, remark, recommendation } }
+    visits.filter(fv => canEdit && fv.status !== 'Completed').forEach(fv => {
+        dualInputs[fv.id] = {};
+
+        const problemContainer = document.getElementById(`fv-problem-${fv.id}`);
+        if (problemContainer) {
+            dualInputs[fv.id].problem = createDualLangInput({
+                name: `fvProblem-${fv.id.substring(0,8)}`, label: t('fieldVisit.problem'), i18nKey: 'fieldVisit.problem',
+                type: 'textarea', required: true, maxLength: 2000,
+                valueEn: fv.problemDescription_En || '', valueMr: fv.problemDescription_Mr || ''
+            });
+            problemContainer.appendChild(dualInputs[fv.id].problem);
+        }
+
+        const measContainer = document.getElementById(`fv-measurements-${fv.id}`);
+        if (measContainer) {
+            dualInputs[fv.id].measurements = createDualLangInput({
+                name: `fvMeasurements-${fv.id.substring(0,8)}`, label: t('fieldVisit.measurements') + ` (${t('common.optional')})`, i18nKey: 'fieldVisit.measurements',
+                type: 'textarea', required: false, maxLength: 2000,
+                valueEn: fv.measurements_En || '', valueMr: fv.measurements_Mr || ''
+            });
+            measContainer.appendChild(dualInputs[fv.id].measurements);
+        }
+
+        const remarkContainer = document.getElementById(`fv-remark-${fv.id}`);
+        if (remarkContainer) {
+            dualInputs[fv.id].remark = createDualLangInput({
+                name: `fvRemark-${fv.id.substring(0,8)}`, label: t('fieldVisit.remark'), i18nKey: 'fieldVisit.remark',
+                type: 'text', required: false, maxLength: 500,
+                valueEn: fv.remark_En || '', valueMr: fv.remark_Mr || ''
+            });
+            remarkContainer.appendChild(dualInputs[fv.id].remark);
+        }
+
+        const recContainer = document.getElementById(`fv-recommendation-${fv.id}`);
+        if (recContainer) {
+            dualInputs[fv.id].recommendation = createDualLangInput({
+                name: `fvRec-${fv.id.substring(0,8)}`, label: t('fieldVisit.recommendation'), i18nKey: 'fieldVisit.recommendation',
+                type: 'textarea', required: false, maxLength: 2000,
+                valueEn: fv.recommendation_En || '', valueMr: fv.recommendation_Mr || ''
+            });
+            recContainer.appendChild(dualInputs[fv.id].recommendation);
+        }
+    });
+
+    // ── Wire: Form submit (Save) ──
+    c.querySelectorAll('.fv-edit-form').forEach(form => {
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fvId = form.dataset.fvId;
+            const inputs = dualInputs[fvId] || {};
+            const problemVals = inputs.problem?.getValues() || { en: '', alt: '' };
+            const measVals = inputs.measurements?.getValues() || { en: '', alt: '' };
+            const remarkVals = inputs.remark?.getValues() || { en: '', alt: '' };
+            const recVals = inputs.recommendation?.getValues() || { en: '', alt: '' };
+
+            const body = {
+                id: fvId,
+                siteConditionId: form.querySelector('.fv-site-condition')?.value || null,
+                inspectionDate: form.querySelector('.fv-inspection-date')?.value || null,
+                problemDescription_En: problemVals.en,
+                problemDescription_Mr: problemVals.alt,
+                measurements_En: measVals.en,
+                measurements_Mr: measVals.alt,
+                gpsLatitude: parseFloat(form.querySelector('.fv-gps-lat')?.value) || null,
+                gpsLongitude: parseFloat(form.querySelector('.fv-gps-long')?.value) || null,
+                remark_En: remarkVals.en,
+                remark_Mr: remarkVals.alt,
+                recommendation_En: recVals.en,
+                recommendation_Mr: recVals.alt
+            };
+
+            const r = await api.put(`/proposals/${pid}/field-visits/${fvId}`, body);
+            if (r.success) { toast.success(t('fieldVisit.saved')); await renderTab2(c, pid, canEdit); }
+            else toast.error(r.error || t('common.loadError'));
+        });
+    });
+
+    // ── Wire: PDF upload ──
+    c.querySelectorAll('.fv-pdf-input').forEach(input => {
+        input.addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) { toast.error(t('fieldVisit.pdfSizeError')); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            const fvId = input.dataset.fvId;
+            const r = await api.upload(`/proposals/${pid}/field-visits/${fvId}/pdf`, fd);
+            if (r.success) { toast.success(t('fieldVisit.pdfUploadSuccess')); await renderTab2(c, pid, canEdit); }
+            else toast.error(r.error || t('common.loadError'));
+        });
+    });
+
+    // ── Wire: Signature upload ──
+    c.querySelectorAll('.fv-signature-input').forEach(input => {
+        input.addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) { toast.error(t('fieldVisit.signatureSizeError')); return; }
+            const fd = new FormData();
+            fd.append('file', file);
+            const fvId = input.dataset.fvId;
+            const r = await api.upload(`/proposals/${pid}/field-visits/${fvId}/signature`, fd);
+            if (r.success) { toast.success(t('fieldVisit.signatureUploadSuccess')); await renderTab2(c, pid, canEdit); }
+            else toast.error(r.error || t('common.loadError'));
+        });
+    });
+
+    // ── Wire: Assign Visit button → open modal and load engineers ──
     const btnAssign = document.getElementById('btn-assign-fv');
     if (btnAssign) btnAssign.addEventListener('click', async () => {
         const modal = new bootstrap.Modal(document.getElementById('assignFvModal'));
@@ -298,7 +537,7 @@ async function renderTab2(c, pid, canEdit) {
         }
     });
 
-    // Wire: Confirm assign
+    // ── Wire: Confirm assign ──
     document.getElementById('btn-confirm-assign-fv')?.addEventListener('click', async () => {
         const engineerId = document.getElementById('fv-engineer-select').value;
         if (!engineerId) { toast.error('Please select an engineer'); return; }
@@ -308,15 +547,49 @@ async function renderTab2(c, pid, canEdit) {
         else toast.error(r.error || 'Failed to assign');
     });
 
-    // Wire: Complete buttons
+    // ── Wire: Complete buttons (Sign & Complete) ──
     c.querySelectorAll('.btn-complete-fv').forEach(btn =>
         btn.addEventListener('click', async () => {
-            const r = await api.post(`/proposals/${pid}/field-visits/${btn.dataset.id}/complete`);
-            if (r.success) { toast.success('Visit completed'); await renderTab2(c, pid, canEdit); } else toast.error(r.error || 'Failed');
+            const fvId = btn.dataset.id;
+            // First save the form data
+            const form = btn.closest('.fv-edit-form');
+            if (form) {
+                const inputs = dualInputs[fvId] || {};
+                const problemVals = inputs.problem?.getValues() || { en: '', alt: '' };
+                if (!problemVals.en) { toast.error(t('fieldVisit.problemRequired')); return; }
+
+                const measVals = inputs.measurements?.getValues() || { en: '', alt: '' };
+                const remarkVals = inputs.remark?.getValues() || { en: '', alt: '' };
+                const recVals = inputs.recommendation?.getValues() || { en: '', alt: '' };
+
+                const body = {
+                    id: fvId,
+                    siteConditionId: form.querySelector('.fv-site-condition')?.value || null,
+                    inspectionDate: form.querySelector('.fv-inspection-date')?.value || null,
+                    problemDescription_En: problemVals.en,
+                    problemDescription_Mr: problemVals.alt,
+                    measurements_En: measVals.en,
+                    measurements_Mr: measVals.alt,
+                    gpsLatitude: parseFloat(form.querySelector('.fv-gps-lat')?.value) || null,
+                    gpsLongitude: parseFloat(form.querySelector('.fv-gps-long')?.value) || null,
+                    remark_En: remarkVals.en,
+                    remark_Mr: remarkVals.alt,
+                    recommendation_En: recVals.en,
+                    recommendation_Mr: recVals.alt
+                };
+
+                const saveRes = await api.put(`/proposals/${pid}/field-visits/${fvId}`, body);
+                if (!saveRes.success) { toast.error(saveRes.error || t('common.loadError')); return; }
+            }
+
+            // Then complete
+            const r = await api.post(`/proposals/${pid}/field-visits/${fvId}/complete`);
+            if (r.success) { toast.success(t('fieldVisit.visitCompleted')); await renderTab2(c, pid, canEdit); }
+            else toast.error(r.error || 'Failed');
         })
     );
 
-    // Wire: Photo upload inputs (both "Upload Photos" buttons and "Add more" tiles)
+    // ── Wire: Photo upload inputs ──
     c.querySelectorAll('.fv-photo-input').forEach(input =>
         input.addEventListener('change', async (e) => {
             const fvId = input.dataset.id;
@@ -336,7 +609,7 @@ async function renderTab2(c, pid, canEdit) {
         })
     );
 
-    // Wire: Drag-and-drop on drop zones
+    // ── Wire: Drag-and-drop on drop zones ──
     c.querySelectorAll('.fv-drop-zone').forEach(zone => {
         zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('border-primary', 'bg-primary', 'bg-opacity-10'); });
         zone.addEventListener('dragleave', () => { zone.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10'); });
@@ -361,7 +634,7 @@ async function renderTab2(c, pid, canEdit) {
         });
     });
 
-    // Wire: Delete photo buttons
+    // ── Wire: Delete photo buttons ──
     c.querySelectorAll('.btn-del-photo').forEach(btn =>
         btn.addEventListener('click', async () => {
             if (!confirm('Delete this photo?')) return;
