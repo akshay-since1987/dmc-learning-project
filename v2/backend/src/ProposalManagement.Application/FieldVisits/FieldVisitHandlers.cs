@@ -250,6 +250,7 @@ public class UploadFieldVisitPhotoHandler(IAppDbContext db, ICurrentUser user, I
 
         var fv = await db.FieldVisits.FindAsync(new object[] { request.FieldVisitId }, ct);
         if (fv is null) return Result<Guid>.NotFound("Field visit not found");
+        if (fv.Status == nameof(FieldVisitStatus.Completed)) return Result<Guid>.Failure("Cannot upload photos to a completed field visit");
         if (fv.AssignedToId != user.UserId) return Result<Guid>.Forbidden("Only assigned engineer can upload photos");
 
         var safeFileName = Path.GetFileName(request.FileName);

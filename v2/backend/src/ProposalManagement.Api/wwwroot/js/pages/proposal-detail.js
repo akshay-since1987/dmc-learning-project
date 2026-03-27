@@ -182,7 +182,7 @@ async function renderTab2(c, pid, canEdit) {
     } else {
         visits.forEach(fv => {
             const sBg = fv.status === 'Completed' ? 'success' : fv.status === 'InProgress' ? 'primary' : 'secondary';
-            const canUpload = canEdit;  // any user with tab-edit access can upload photos
+            const canUpload = canEdit && fv.status !== 'Completed';
             const canModifyVisit = canEdit && fv.status !== 'Completed';
             const photoCount = fv.photos?.length || 0;
 
